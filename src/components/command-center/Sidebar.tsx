@@ -1,12 +1,13 @@
 import { LayoutDashboard, Container, FileText, Ship, Building2, Bell, Settings, BookOpen } from "lucide-react";
+import { NavLink } from "react-router-dom";
 
 const nav = [
-  { icon: LayoutDashboard, label: "Command Center", active: true },
-  { icon: Container, label: "Containers" },
-  { icon: Ship, label: "Vessels & ETAs" },
-  { icon: FileText, label: "Phyto Certificates" },
-  { icon: Building2, label: "Facilities" },
-  { icon: Bell, label: "Alerts" },
+  { icon: LayoutDashboard, label: "Command Center", to: "/" },
+  { icon: Container, label: "Containers", to: "/containers" },
+  { icon: Ship, label: "Vessels & ETAs", to: "#" },
+  { icon: FileText, label: "Phyto Certificates", to: "#" },
+  { icon: Building2, label: "Facilities", to: "#" },
+  { icon: Bell, label: "Alerts", to: "#" },
 ];
 
 const facilities = [
@@ -40,19 +41,35 @@ export const Sidebar = () => {
       </div>
 
       <nav className="flex-1 px-2 py-3 space-y-0.5">
-        {nav.map((item) => (
-          <button
-            key={item.label}
-            className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm transition-colors ${
-              item.active
-                ? "bg-primary text-primary-foreground"
-                : "text-foreground/80 hover:bg-secondary"
-            }`}
-          >
-            <item.icon className="w-4 h-4" />
-            {item.label}
-          </button>
-        ))}
+        {nav.map((item) => {
+          const isLive = item.to !== "#";
+          if (!isLive) {
+            return (
+              <button
+                key={item.label}
+                className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm transition-colors text-foreground/80 hover:bg-secondary"
+              >
+                <item.icon className="w-4 h-4" />
+                {item.label}
+              </button>
+            );
+          }
+          return (
+            <NavLink
+              key={item.label}
+              to={item.to}
+              end={item.to === "/"}
+              className={({ isActive }) =>
+                `w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm transition-colors ${
+                  isActive ? "bg-primary text-primary-foreground" : "text-foreground/80 hover:bg-secondary"
+                }`
+              }
+            >
+              <item.icon className="w-4 h-4" />
+              {item.label}
+            </NavLink>
+          );
+        })}
 
         <div className="pt-5 pb-1 px-2.5 text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-2">
           <span className="h-px flex-1 bg-border" />
