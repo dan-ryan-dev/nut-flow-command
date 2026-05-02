@@ -102,6 +102,7 @@ export const CommandBar = ({ open, onClose, onCreateBooking }: Props) => {
   if (!open) return null;
 
   const isCreate = q.toLowerCase().startsWith("new") || q.toLowerCase().includes("booking");
+  const suggestionAnswer = ALL_SUGGESTIONS.find((s) => s.label === q)?.answer;
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-[12vh] px-4" onClick={onClose}>
@@ -196,10 +197,12 @@ export const CommandBar = ({ open, onClose, onCreateBooking }: Props) => {
                   <div className="text-sm text-foreground leading-relaxed">
                     {isCreate ? (
                       <>Press Enter to start a new booking — or drop the carrier PDF to auto-fill.</>
+                    ) : suggestionAnswer ? (
+                      <>{suggestionAnswer}</>
                     ) : matches.length ? (
                       <>Found <span className="font-semibold">{matches.length}</span> containers matching "{q}". 2 are flagged for missing Phyto fields.</>
                     ) : (
-                      <>No containers match. I can search the legacy SQL system or create a new booking from a PDF.</>
+                      <>{fallbackAnswer}</>
                     )}
                   </div>
                 </div>
