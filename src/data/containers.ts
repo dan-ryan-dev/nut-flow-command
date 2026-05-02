@@ -1,5 +1,22 @@
 export type ContainerStatus = "action" | "in-transit" | "at-port" | "delivered" | "draft";
 
+export type LogisticsStatus =
+  | "pending-load"
+  | "origin-received"
+  | "gated-in"
+  | "loaded-vessel"
+  | "arrived-discharge"
+  | "closed";
+
+export type DocStatus = "attached" | "draft" | "missing";
+
+export interface ContainerDocs {
+  phyto: DocStatus;
+  bol: DocStatus;
+  commercialInvoice: DocStatus;
+  packingList: DocStatus;
+}
+
 export interface Container {
   id: string;
   booking: string;
@@ -17,6 +34,11 @@ export interface Container {
   alert?: string;
   phytoComplete: boolean;
   facility: "Salida" | "Modesto" | "Firebaugh" | "Chowchilla";
+  lots: string[];
+  shipmentWeek: string;
+  logisticsStatus: LogisticsStatus;
+  docs: ContainerDocs;
+  etaDelayed?: boolean;
 }
 
 export const containers: Container[] = [
