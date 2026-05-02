@@ -8,12 +8,44 @@ interface Props {
   onCreateBooking: () => void;
 }
 
-const ALL_SUGGESTIONS: { label: string; kind: string }[] = [
-  { label: "Which containers are At POD but missing Phyto certificates?", kind: "AI Query" },
-  { label: "Show me all shipments for Nordmann GmbH in Week 19.", kind: "AI Query" },
-  { label: "Which vessels have a port cutoff in the next 48 hours?", kind: "AI Query" },
-  { label: "Find all containers associated with Lot ID 447W.", kind: "AI Query" },
-  { label: "Show me the total weight of almonds currently On Vessel.", kind: "AI Query" },
+const ALL_SUGGESTIONS: { label: string; kind: string; answer: string }[] = [
+  {
+    label: "Which containers are At POD but missing Phyto certificates?",
+    kind: "AI Query",
+    answer:
+      "2 containers at POD are missing Phyto certificates: MSKU-7741920 (Hamburg) and TCLU-3398812 (Rotterdam). Both are within the 5-day demurrage window — recommend drafting Phyto via Nomos now.",
+  },
+  {
+    label: "Show me all shipments for Nordmann GmbH in Week 19.",
+    kind: "AI Query",
+    answer:
+      "Nordmann GmbH has 4 shipments in Week 19 — 3 On Vessel (ETA Hamburg May 14–17) and 1 Pending Load at Capay Canyon. Total: 108,000 lbs almonds across 4 lots.",
+  },
+  {
+    label: "Which vessels have a port cutoff in the next 48 hours?",
+    kind: "AI Query",
+    answer:
+      "3 vessels have cutoffs in the next 48 hours: MSC Bellissima (Fri 14:00), CMA CGM Marco Polo (Sat 09:00), and Maersk Edinburgh (Sat 18:00). 1 container is at risk of missing the MSC cutoff.",
+  },
+  {
+    label: "Find all containers associated with Lot ID 447W.",
+    kind: "AI Query",
+    answer:
+      "Lot 447W is split across 2 containers: MSKU-7741920 (On Vessel → Hamburg) and TGHU-5582013 (Gated-in, Oakland). Combined weight: 54,000 lbs Nonpareil almonds, harvest 2025-09.",
+  },
+  {
+    label: "Show me the total weight of almonds currently On Vessel.",
+    kind: "AI Query",
+    answer:
+      "12 containers currently On Vessel — total 648,000 lbs of almonds (Nonpareil 71%, Carmel 22%, Independence 7%) across 5 vessels bound for EU and APAC ports.",
+  },
+];
+
+const FALLBACK_ANSWERS = [
+  "No exact matches in Nomos DB. I can broaden the search to archived bookings, scan the legacy SQL system, or start a new booking from a PDF.",
+  "Nothing live matches that query. Want me to check closed loads from the last 90 days or pull from the legacy SQL warehouse?",
+  "Zero hits in the active ledger. I can re-run against the legacy SQL system or draft a new booking if this is a fresh shipment.",
+  "I couldn't find a container matching that. Try a booking number, lot ID, or vessel name — or drop a PDF to log a new one.",
 ];
 
 const pickThree = () => {
@@ -29,12 +61,14 @@ export const CommandBar = ({ open, onClose, onCreateBooking }: Props) => {
   const [q, setQ] = useState("");
   const [suggestions, setSuggestions] = useState(() => pickThree());
   const [processing, setProcessing] = useState(false);
+  const [fallbackAnswer, setFallbackAnswer] = useState(FALLBACK_ANSWERS[0]);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open) {
       setSuggestions(pickThree());
       setProcessing(false);
+      setFallbackAnswer(FALLBACK_ANSWERS[Math.floor(Math.random() * FALLBACK_ANSWERS.length)]);
       setTimeout(() => inputRef.current?.focus(), 30);
     } else {
       setQ("");
@@ -68,6 +102,7 @@ export const CommandBar = ({ open, onClose, onCreateBooking }: Props) => {
   if (!open) return null;
 
   const isCreate = q.toLowerCase().startsWith("new") || q.toLowerCase().includes("booking");
+  const suggestionAnswer = ALL_SUGGESTIONS.find((s) => s.label === q)?.answer;
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-[12vh] px-4" onClick={onClose}>
@@ -162,10 +197,12 @@ export const CommandBar = ({ open, onClose, onCreateBooking }: Props) => {
                   <div className="text-sm text-foreground leading-relaxed">
                     {isCreate ? (
                       <>Press Enter to start a new booking — or drop the carrier PDF to auto-fill.</>
+                    ) : suggestionAnswer ? (
+                      <>{suggestionAnswer}</>
                     ) : matches.length ? (
                       <>Found <span className="font-semibold">{matches.length}</span> containers matching "{q}". 2 are flagged for missing Phyto fields.</>
                     ) : (
-                      <>No containers match. I can search the legacy SQL system or create a new booking from a PDF.</>
+                      <>{fallbackAnswer}</>
                     )}
                   </div>
                 </div>
