@@ -18,12 +18,12 @@ const META: Record<LogisticsStatus, { label: string; className: string; icon: ty
     icon: DoorOpen,
   },
   "loaded-vessel": {
-    label: "Loaded on Vessel",
+    label: "On Vessel",
     className: "bg-primary text-primary-foreground border border-primary",
     icon: Ship,
   },
   "arrived-discharge": {
-    label: "Arrived at Discharge",
+    label: "At POD",
     className: "bg-success/15 text-success border border-success/30",
     icon: Anchor,
   },
@@ -38,8 +38,19 @@ export const StatusBadge = ({ status }: { status: LogisticsStatus }) => {
   const m = META[status];
   const Icon = m.icon;
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold ${m.className}`}>
-      <Icon className="w-3 h-3" /> {m.label}
+    <span
+      className={`inline-flex items-center justify-center rounded font-semibold ${m.className}`}
+      style={{
+        gap: "6px",
+        paddingInline: "0.425rem",
+        paddingBlock: "0.085rem",
+        fontSize: "9.4px",
+        lineHeight: 1.2,
+        minWidth: "112px",
+      }}
+    >
+      <Icon className="w-3 h-3 shrink-0" />
+      <span className="whitespace-nowrap">{m.label}</span>
     </span>
   );
 };
