@@ -23,7 +23,7 @@ interface PhytoField {
 // USDA PPQ Form 577 — Phytosanitary Certificate logical block layout
 const buildFields = (c: Container): PhytoField[] => [
   // Block I — Description of Consignment
-  { block: "I. Description of Consignment", label: "Exporter (Name & Address)", value: "Sierra Nut Co. · 1820 Crows Landing Rd, Salida CA 95368", status: "ok", source: "Nomos DB · facility profile" },
+  { block: "I. Description of Consignment", label: "Exporter (Name & Address)", value: "Capay Canyon Ranch · 1820 Crows Landing Rd, Salida CA 95368", status: "ok", source: "Nomos DB · facility profile" },
   { block: "I. Description of Consignment", label: "Consignee (Name & Address)", status: "missing", source: "Nomos DB · buyer record incomplete", hint: `${c.buyer} street address & postal code not on file` },
   { block: "I. Description of Consignment", label: "Place of Origin", value: `${c.facility}, California, USA`, status: "ok", source: "Nomos DB" },
   { block: "I. Description of Consignment", label: "Means of Conveyance", value: `Vessel ${c.vessel} / Voy ${c.voyage}`, status: "ok", source: "Carrier feed" },
