@@ -146,7 +146,7 @@ export const CommandBar = ({ open, onClose, onCreateBooking }: Props) => {
             <span className="flex items-center gap-1"><kbd className="px-1 rounded bg-card border border-border">↑↓</kbd> navigate</span>
             <span className="flex items-center gap-1"><kbd className="px-1 rounded bg-card border border-border">↵</kbd> open</span>
           </div>
-          <span>Powered by HARVEST AI · grounded in legacy SQL + Port of Oakland feed</span>
+          <span>Powered by Nomos AI · grounded in Nomos DB + Port of Oakland feed</span>
         </div>
       </div>
     </div>
