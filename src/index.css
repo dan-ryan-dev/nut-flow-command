@@ -8,35 +8,51 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Modern Industrial — Navy / White / Safety Orange */
+    --background: 210 20% 98%;
+    --foreground: 215 50% 12%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 215 50% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 215 50% 12%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Navy */
+    --primary: 215 65% 18%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 215 55% 28%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 210 25% 94%;
+    --secondary-foreground: 215 50% 18%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 210 20% 95%;
+    --muted-foreground: 215 15% 42%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* Safety Orange — Action Required */
+    --accent: 18 96% 52%;
+    --accent-foreground: 0 0% 100%;
+    --accent-soft: 22 100% 96%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --success: 152 60% 36%;
+    --success-foreground: 0 0% 100%;
+    --warning: 40 95% 50%;
+    --warning-foreground: 215 50% 12%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --destructive: 0 75% 48%;
+    --destructive-foreground: 0 0% 100%;
 
-    --radius: 0.5rem;
+    --border: 215 20% 88%;
+    --input: 215 20% 88%;
+    --ring: 18 96% 52%;
+
+    --radius: 0.375rem;
+
+    --gradient-navy: linear-gradient(180deg, hsl(215 65% 14%), hsl(215 55% 22%));
+    --gradient-action: linear-gradient(135deg, hsl(18 96% 52%), hsl(14 92% 46%));
+    --shadow-card: 0 1px 2px hsl(215 50% 12% / 0.04), 0 1px 3px hsl(215 50% 12% / 0.06);
+    --shadow-elevated: 0 10px 30px -12px hsl(215 50% 12% / 0.18);
+    --shadow-glow-action: 0 0 0 4px hsl(18 96% 52% / 0.18);
 
     --sidebar-background: 0 0% 98%;
 
