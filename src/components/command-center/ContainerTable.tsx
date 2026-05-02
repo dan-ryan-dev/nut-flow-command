@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { containers, type Container } from "@/data/containers";
 import { AlertTriangle, CheckCircle2, Ship, Anchor, FileText, MoreHorizontal } from "lucide-react";
+import { PhytoSheet } from "./PhytoSheet";
 
 const statusBadge = (s: Container["status"]) => {
   switch (s) {
@@ -17,6 +19,7 @@ const statusBadge = (s: Container["status"]) => {
 };
 
 export const ContainerTable = () => {
+  const [phytoFor, setPhytoFor] = useState<Container | null>(null);
   return (
     <section className="bg-card rounded-lg border border-border overflow-hidden">
       <div className="px-5 py-3 border-b border-border flex items-center justify-between">
@@ -76,9 +79,12 @@ export const ContainerTable = () => {
                       <CheckCircle2 className="w-3.5 h-3.5" /> Complete
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 text-accent text-xs font-semibold">
+                    <button
+                      onClick={() => setPhytoFor(c)}
+                      className="inline-flex items-center gap-1 text-accent text-xs font-semibold underline-offset-2 hover:underline"
+                    >
                       <AlertTriangle className="w-3.5 h-3.5" /> Missing 4
-                    </span>
+                    </button>
                   )}
                 </td>
                 <td className="px-3 py-3">
@@ -95,6 +101,7 @@ export const ContainerTable = () => {
           })}
         </tbody>
       </table>
+      <PhytoSheet container={phytoFor} open={!!phytoFor} onClose={() => setPhytoFor(null)} />
     </section>
   );
 };
