@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { containers, type Container } from "@/data/containers";
-import { AlertTriangle, CheckCircle2, Ship, Anchor, FileText, MoreHorizontal } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Ship, Anchor, FileText, MoreHorizontal, Paperclip } from "lucide-react";
 import { PhytoSheet } from "./PhytoSheet";
+import { usePhytoAttached } from "@/state/phytoStore";
 
 const statusBadge = (s: Container["status"]) => {
   switch (s) {
@@ -74,18 +75,7 @@ export const ContainerTable = () => {
                 </td>
                 <td className="px-3 py-3 tabular-nums text-foreground/90">{c.cutoff}</td>
                 <td className="px-3 py-3">
-                  {c.phytoComplete ? (
-                    <span className="inline-flex items-center gap-1 text-success text-xs font-medium">
-                      <CheckCircle2 className="w-3.5 h-3.5" /> Complete
-                    </span>
-                  ) : (
-                    <button
-                      onClick={() => setPhytoFor(c)}
-                      className="inline-flex items-center gap-1 text-accent text-xs font-semibold underline-offset-2 hover:underline"
-                    >
-                      <AlertTriangle className="w-3.5 h-3.5" /> Missing 4
-                    </button>
-                  )}
+                  <PhytoCell container={c} onOpen={() => setPhytoFor(c)} />
                 </td>
                 <td className="px-3 py-3">
                   <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold ${b.className}`}>
