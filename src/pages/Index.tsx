@@ -101,7 +101,7 @@ const Index = () => {
             <ContainerTable />
 
             <div className="text-center text-[11px] text-muted-foreground py-2">
-              Layered on legacy SQL · Sierra Nut Co. · synced 12 sec ago
+              Layered on Nomos DB · Capay Canyon Ranch · Synced 12 sec ago
             </div>
           </div>
         </div>
