@@ -95,3 +95,33 @@ export const ContainerTable = () => {
     </section>
   );
 };
+
+const PhytoCell = ({ container, onOpen }: { container: Container; onOpen: () => void }) => {
+  const attached = usePhytoAttached(container.booking);
+  if (attached) {
+    return (
+      <button
+        onClick={onOpen}
+        className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-primary/10 text-primary border border-primary/30 hover:bg-primary/15"
+        title="Draft PDF attached to booking in Nomos Doc Storage"
+      >
+        <Paperclip className="w-3 h-3" /> Draft Attached
+      </button>
+    );
+  }
+  if (container.phytoComplete) {
+    return (
+      <span className="inline-flex items-center gap-1 text-success text-xs font-medium">
+        <CheckCircle2 className="w-3.5 h-3.5" /> Complete
+      </span>
+    );
+  }
+  return (
+    <button
+      onClick={onOpen}
+      className="inline-flex items-center gap-1 text-accent text-xs font-semibold underline-offset-2 hover:underline"
+    >
+      <AlertTriangle className="w-3.5 h-3.5" /> Missing 4
+    </button>
+  );
+};
