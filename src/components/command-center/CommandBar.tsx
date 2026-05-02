@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Search, Sparkles, Ship, FileText, Container as ContainerIcon, ArrowRight, CornerDownLeft } from "lucide-react";
+import { Search, Sparkles, ShieldCheck, Loader2, Container as ContainerIcon, ArrowRight, CornerDownLeft } from "lucide-react";
 import { containers } from "@/data/containers";
 
 interface Props {
@@ -8,21 +8,47 @@ interface Props {
   onCreateBooking: () => void;
 }
 
-const suggestions = [
-  { icon: Sparkles, label: "Show every container at risk of missing this Friday's cutoff", kind: "AI Query" },
-  { icon: Sparkles, label: "Which Hamburg shipments are missing Phyto fields?", kind: "AI Query" },
-  { icon: Ship, label: "Port of Oakland — live berth & congestion", kind: "Live data" },
-  { icon: FileText, label: "Generate USDA Phyto draft for BK-99182", kind: "Action" },
+const ALL_SUGGESTIONS: { label: string; kind: string }[] = [
+  { label: "Which containers are At POD but missing Phyto certificates?", kind: "AI Query" },
+  { label: "Show me all shipments for Nordmann GmbH in Week 19.", kind: "AI Query" },
+  { label: "Which vessels have a port cutoff in the next 48 hours?", kind: "AI Query" },
+  { label: "Find all containers associated with Lot ID 447W.", kind: "AI Query" },
+  { label: "Show me the total weight of almonds currently On Vessel.", kind: "AI Query" },
 ];
+
+const pickThree = () => {
+  const arr = [...ALL_SUGGESTIONS];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr.slice(0, 3);
+};
 
 export const CommandBar = ({ open, onClose, onCreateBooking }: Props) => {
   const [q, setQ] = useState("");
+  const [suggestions, setSuggestions] = useState(() => pickThree());
+  const [processing, setProcessing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (open) setTimeout(() => inputRef.current?.focus(), 30);
-    else setQ("");
+    if (open) {
+      setSuggestions(pickThree());
+      setProcessing(false);
+      setTimeout(() => inputRef.current?.focus(), 30);
+    } else {
+      setQ("");
+      setProcessing(false);
+    }
   }, [open]);
+
+  const runSuggestion = (label: string) => {
+    setQ(label);
+    setProcessing(true);
+    setTimeout(() => {
+      setProcessing(false);
+    }, 1500);
+  };
 
   const matches = useMemo(() => {
     if (!q) return [];
@@ -70,10 +96,10 @@ export const CommandBar = ({ open, onClose, onCreateBooking }: Props) => {
               {suggestions.map((s) => (
                 <button
                   key={s.label}
-                  onClick={() => setQ(s.label)}
+                  onClick={() => runSuggestion(s.label)}
                   className="w-full flex items-center gap-3 px-2.5 py-2.5 rounded-md hover:bg-secondary text-left"
                 >
-                  <s.icon className="w-4 h-4 text-accent" />
+                  <Sparkles className="w-4 h-4 text-accent" />
                   <span className="flex-1 text-sm text-foreground">{s.label}</span>
                   <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{s.kind}</span>
                 </button>
@@ -93,10 +119,23 @@ export const CommandBar = ({ open, onClose, onCreateBooking }: Props) => {
                   <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-accent" />
                 </button>
               </div>
+              <div className="border-t border-border mt-2 pt-2 px-2.5 pb-1 flex items-center justify-center">
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-success/10 text-success border border-success/30 text-[10px] font-semibold uppercase tracking-wider">
+                  <ShieldCheck className="w-3 h-3" /> Grounded in Nomos DB
+                </span>
+              </div>
             </div>
           )}
 
-          {q && matches.length > 0 && (
+          {q && processing && (
+            <div className="p-6 flex flex-col items-center justify-center gap-2 text-center">
+              <Loader2 className="w-5 h-5 text-accent animate-spin" />
+              <div className="text-sm text-foreground font-medium">Processing…</div>
+              <div className="text-[11px] text-muted-foreground">Querying Nomos DB · scanning 42 containers</div>
+            </div>
+          )}
+
+          {q && !processing && matches.length > 0 && (
             <div className="p-2">
               <div className="px-2 py-1.5 text-[10px] uppercase tracking-widest text-muted-foreground">Containers</div>
               {matches.map((c) => (
@@ -114,7 +153,7 @@ export const CommandBar = ({ open, onClose, onCreateBooking }: Props) => {
             </div>
           )}
 
-          {q && (
+          {q && !processing && (
             <div className="border-t border-border p-3 bg-secondary/40">
               <div className="flex items-start gap-3">
                 <Sparkles className="w-4 h-4 text-accent mt-0.5" />
@@ -132,7 +171,9 @@ export const CommandBar = ({ open, onClose, onCreateBooking }: Props) => {
                 </div>
               </div>
               <div className="mt-3 flex items-center justify-between">
-                <div className="text-[10px] text-muted-foreground">Querying legacy SQL · live</div>
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-success/10 text-success border border-success/30 text-[10px] font-semibold uppercase tracking-wider">
+                  <ShieldCheck className="w-3 h-3" /> Grounded in Nomos DB
+                </span>
                 <button onClick={onCreateBooking} className="text-xs font-semibold text-accent hover:underline">
                   Drop PDF instead →
                 </button>
