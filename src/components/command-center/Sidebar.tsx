@@ -1,4 +1,4 @@
-import { Anchor, LayoutDashboard, Container, FileText, Ship, Building2, Bell, Settings, BookOpen } from "lucide-react";
+import { LayoutDashboard, Container, FileText, Ship, Building2, Bell, Settings, BookOpen } from "lucide-react";
 
 const nav = [
   { icon: LayoutDashboard, label: "Command Center", active: true },
@@ -21,10 +21,10 @@ export const Sidebar = () => {
     <aside className="w-60 shrink-0 border-r border-border bg-card flex flex-col">
       <div className="px-5 py-5 flex items-center gap-2 border-b border-border">
         <div className="w-8 h-8 rounded-md bg-primary flex items-center justify-center">
-          <Anchor className="w-4 h-4 text-primary-foreground" />
+          <Ship className="w-4 h-4 text-primary-foreground" />
         </div>
         <div>
-          <div className="text-sm font-bold tracking-tight text-foreground">HARVEST/OPS</div>
+          <div className="text-sm font-bold tracking-tight text-foreground">NOMOS</div>
           <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Export Command</div>
         </div>
       </div>
@@ -33,7 +33,7 @@ export const Sidebar = () => {
         <div className="px-2 py-1.5 rounded-md bg-secondary flex items-center justify-between">
           <div>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Org</div>
-            <div className="text-sm font-semibold text-foreground">Sierra Nut Co.</div>
+            <div className="text-sm font-semibold text-foreground">Capay Canyon Ranch</div>
           </div>
           <Settings className="w-3.5 h-3.5 text-muted-foreground" />
         </div>
