@@ -1,7 +1,9 @@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Container } from "@/data/containers";
-import { AlertTriangle, CheckCircle2, FileText, Sparkles, ShieldCheck, Stamp } from "lucide-react";
+import { AlertTriangle, CheckCircle2, FileText, Sparkles, ShieldCheck, Stamp, FileSearch } from "lucide-react";
 import { toast } from "sonner";
+import { useState } from "react";
+import { PhytoPdfPreview } from "./PhytoPdfPreview";
 
 interface PhytoSheetProps {
   container: Container | null;
@@ -58,6 +60,7 @@ export const PhytoSheet = ({ container, open, onClose }: PhytoSheetProps) => {
   const fields = buildFields(container);
   const missing = fields.filter((f) => f.status === "missing");
   const blocks = Array.from(new Set(fields.map((f) => f.block)));
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   return (
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
@@ -175,16 +178,20 @@ export const PhytoSheet = ({ container, open, onClose }: PhytoSheetProps) => {
             Close
           </button>
           <button
-            onClick={() => {
-              toast.success(`Phyto draft saved · ${container.booking}`, { description: "Routed to USDA officer queue" });
-              onClose();
-            }}
-            className="text-sm font-semibold px-3 py-1.5 rounded-md text-accent-foreground"
+            onClick={() => setPreviewOpen(true)}
+            className="text-sm font-semibold px-3 py-1.5 rounded-md text-accent-foreground inline-flex items-center gap-1.5"
             style={{ backgroundImage: "var(--gradient-action)" }}
           >
-            Resolve {missing.length} & submit
+            <FileSearch className="w-3.5 h-3.5" />
+            Preview Draft PDF
           </button>
         </div>
+        <PhytoPdfPreview
+          container={container}
+          open={previewOpen}
+          onClose={() => setPreviewOpen(false)}
+          onAttached={onClose}
+        />
       </SheetContent>
     </Sheet>
   );
