@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, Sparkles, ShieldCheck, Loader2, Container as ContainerIcon, ArrowRight, CornerDownLeft } from "lucide-react";
-import { containers } from "@/data/containers";
+import { containers } from "@/shared/data/containers";
 
 interface Props {
   open: boolean;

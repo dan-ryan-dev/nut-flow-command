@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { Search, Sparkles, Plus, Anchor, Bell } from "lucide-react";
 import { toast } from "sonner";
-import { Sidebar } from "@/components/command-center/Sidebar";
-import { CommandBar } from "@/components/command-center/CommandBar";
-import { PdfBookingFlow } from "@/components/command-center/PdfBookingFlow";
-import { DailyIntel } from "@/components/command-center/DailyIntel";
-import { ContainerTable } from "@/components/command-center/ContainerTable";
+import { Sidebar } from "@/shared/components/Sidebar";
+import { CommandBar } from "@/features/command-center/components/CommandBar";
+import { PdfBookingFlow } from "@/features/command-center/components/PdfBookingFlow";
+import { DailyIntel } from "@/features/command-center/components/DailyIntel";
+import { ContainerTable } from "@/features/command-center/components/ContainerTable";
 
 const Index = () => {
   const [cmdOpen, setCmdOpen] = useState(false);

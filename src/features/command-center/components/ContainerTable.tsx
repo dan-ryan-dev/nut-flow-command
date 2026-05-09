@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { containers, type Container } from "@/data/containers";
+import { containers, type Container } from "@/shared/data/containers";
 import { AlertTriangle, CheckCircle2, Ship, Anchor, FileText, MoreHorizontal, Paperclip, Clock } from "lucide-react";
-import { PhytoSheet } from "./PhytoSheet";
-import { ErdLrdSheet } from "./ErdLrdSheet";
-import { usePhytoAttached, usePhytoPending } from "@/state/phytoStore";
+import { PhytoCertificationPanel } from "@/features/phyto/components/PhytoCertificationPanel";
+import { ErdLrdPanel } from "@/features/erd-lrd/components/ErdLrdPanel";
+import { usePhytoAttached, usePhytoPending } from "@/features/phyto/state/phytoStore";
 
 const statusBadge = (s: Container["status"]) => {
   switch (s) {
@@ -113,8 +113,8 @@ export const ContainerTable = () => {
           })}
         </tbody>
       </table>
-      <PhytoSheet container={phytoFor} open={!!phytoFor} onClose={() => setPhytoFor(null)} />
-      <ErdLrdSheet
+      <PhytoCertificationPanel container={phytoFor} open={!!phytoFor} onClose={() => setPhytoFor(null)} />
+      <ErdLrdPanel
         container={erdFor}
         open={!!erdFor}
         onClose={() => setErdFor(null)}

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Sidebar } from "@/components/command-center/Sidebar";
+import { Sidebar } from "@/shared/components/Sidebar";
 import { Plus, Pencil, Power } from "lucide-react";
 import { toast } from "sonner";
 

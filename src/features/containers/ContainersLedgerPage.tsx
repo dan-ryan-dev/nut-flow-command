@@ -1,10 +1,10 @@
 import { useMemo, useState } from "react";
-import { Sidebar } from "@/components/command-center/Sidebar";
-import { ContainerLedger } from "@/components/containers/ContainerLedger";
-import { containers, Container } from "@/data/containers";
+import { Sidebar } from "@/shared/components/Sidebar";
+import { ContainerLedger } from "@/features/containers/components/ContainerLedger";
+import { containers, Container } from "@/shared/data/containers";
 import { Switch } from "@/components/ui/switch";
 import { Search, Download } from "lucide-react";
-import { phytoStore } from "@/state/phytoStore";
+import { phytoStore } from "@/features/phyto/state/phytoStore";
 
 const isIssueRow = (c: Container) => {
   const phytoMissing = c.docs.phyto === "missing" && !phytoStore.isAttached(c.booking);

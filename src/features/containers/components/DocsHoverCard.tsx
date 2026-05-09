@@ -1,7 +1,7 @@
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
-import { Container, DocStatus } from "@/data/containers";
+import { Container, DocStatus } from "@/shared/data/containers";
 import { Paperclip, FileText, CheckCircle2, AlertTriangle, FileEdit } from "lucide-react";
-import { usePhytoAttached } from "@/state/phytoStore";
+import { usePhytoAttached } from "@/features/phyto/state/phytoStore";
 
 const docMeta = (s: DocStatus) => {
   if (s === "attached") return { label: "Attached", icon: CheckCircle2, className: "text-success" };

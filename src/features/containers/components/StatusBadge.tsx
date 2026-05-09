@@ -1,4 +1,4 @@
-import { LogisticsStatus } from "@/data/containers";
+import { LogisticsStatus } from "@/shared/data/containers";
 import { CircleDashed, PackageCheck, DoorOpen, Ship, Anchor, CheckCircle2 } from "lucide-react";
 
 const META: Record<LogisticsStatus, { label: string; className: string; icon: typeof Ship }> = {

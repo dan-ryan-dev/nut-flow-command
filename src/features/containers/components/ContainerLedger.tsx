@@ -2,10 +2,10 @@ import { useMemo, useState } from "react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ChevronDown, MoreHorizontal } from "lucide-react";
-import { Container, LogisticsStatus } from "@/data/containers";
+import { Container, LogisticsStatus } from "@/shared/data/containers";
 import { StatusBadge } from "./StatusBadge";
 import { DocsHoverCard } from "./DocsHoverCard";
-import { phytoStore } from "@/state/phytoStore";
+import { phytoStore } from "@/features/phyto/state/phytoStore";
 
 const STATUS_ORDER: Record<LogisticsStatus, number> = {
   "pending-load": 0,
