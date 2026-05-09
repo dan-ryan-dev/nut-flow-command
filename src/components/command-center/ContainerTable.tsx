@@ -2,6 +2,7 @@ import { useState } from "react";
 import { containers, type Container } from "@/data/containers";
 import { AlertTriangle, CheckCircle2, Ship, Anchor, FileText, MoreHorizontal, Paperclip } from "lucide-react";
 import { PhytoSheet } from "./PhytoSheet";
+import { ErdLrdSheet } from "./ErdLrdSheet";
 import { usePhytoAttached } from "@/state/phytoStore";
 
 const statusBadge = (s: Container["status"]) => {
@@ -21,6 +22,7 @@ const statusBadge = (s: Container["status"]) => {
 
 export const ContainerTable = () => {
   const [phytoFor, setPhytoFor] = useState<Container | null>(null);
+  const [erdFor, setErdFor] = useState<Container | null>(null);
   return (
     <section className="bg-card rounded-lg border border-border overflow-hidden">
       <div className="px-5 py-3 border-b border-border flex items-center justify-between">
@@ -78,9 +80,19 @@ export const ContainerTable = () => {
                   <PhytoCell container={c} onOpen={() => setPhytoFor(c)} />
                 </td>
                 <td className="px-3 py-3">
-                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold ${b.className}`}>
-                    <b.icon className="w-3 h-3" /> {b.label}
-                  </span>
+                  {c.status === "action" ? (
+                    <button
+                      onClick={() => setErdFor(c)}
+                      title="Update ERD / LRD"
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold ${b.className} hover:brightness-110 hover:ring-1 hover:ring-accent/50 transition`}
+                    >
+                      <b.icon className="w-3 h-3" /> {b.label}
+                    </button>
+                  ) : (
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold ${b.className}`}>
+                      <b.icon className="w-3 h-3" /> {b.label}
+                    </span>
+                  )}
                   {c.alert && <div className="text-[11px] text-accent mt-1">{c.alert}</div>}
                 </td>
                 <td className="px-3 py-3 text-muted-foreground">
@@ -92,6 +104,7 @@ export const ContainerTable = () => {
         </tbody>
       </table>
       <PhytoSheet container={phytoFor} open={!!phytoFor} onClose={() => setPhytoFor(null)} />
+      <ErdLrdSheet container={erdFor} open={!!erdFor} onClose={() => setErdFor(null)} />
     </section>
   );
 };
