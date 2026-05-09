@@ -103,8 +103,8 @@ Triggered from "Missing" Phyto chips. Implements a full state machine:
   requiring Container ID and Seal Number.
 - **Empty** — "No draft found. Please upload a Sales Contract PDF to initiate
   Phyto-ready logic."
-- **Error** — "Draft generation failed. Manual entry required for BRC/USDA
-  compliance."
+- **Error** — "Draft generation failed. Manual entry required for BRC Global
+  Standard for Food Safety / USDA compliance."
 - **Validation** — Blocks submit if Seal Number or Container ID is missing
   with crimson alert "REQUIRED: USDA Phyto requires a verified Seal Number."
 - **Submit to USDA** — Emerald "Submission Pending" toast, dashboard chip
@@ -165,7 +165,9 @@ Slate) applied via semantic tokens.
 - **Logged real-time** — % of containers with status updated through Nomos
   rather than reconstructed after the fact (prototype shows 31/42, up from 19%).
 - **Demurrage risk** — dollar exposure from at-risk containers (prototype
-  shows $0 across a 14-day window).
+  shows $0 across a 14-day window). _Simulated goal, not a live calculation:
+  the value is derived from the current deterministic seed data and is
+  intended to illustrate the target state, not a real-time financial figure._
 
 ### Outcome metrics the prototype is designed to move
 - **Time to log a booking** — target: <15s from PDF drop (vs ~12 min manual).
