@@ -23,6 +23,7 @@ const statusBadge = (s: Container["status"]) => {
 export const ContainerTable = () => {
   const [phytoFor, setPhytoFor] = useState<Container | null>(null);
   const [erdFor, setErdFor] = useState<Container | null>(null);
+  const [flashId, setFlashId] = useState<string | null>(null);
   return (
     <section className="bg-card rounded-lg border border-border overflow-hidden">
       <div className="px-5 py-3 border-b border-border flex items-center justify-between">
@@ -58,7 +59,16 @@ export const ContainerTable = () => {
           {containers.map((c) => {
             const b = statusBadge(c.status);
             return (
-              <tr key={c.id} className={`hover:bg-secondary/40 ${c.status === "action" ? "bg-accent-soft/40" : ""}`}>
+              <tr
+                key={c.id}
+                className={`hover:bg-secondary/40 transition-colors duration-700 ${
+                  flashId === c.id
+                    ? "bg-success/20"
+                    : c.status === "action"
+                    ? "bg-accent-soft/40"
+                    : ""
+                }`}
+              >
                 <td className="px-5 py-3">
                   <div className="font-mono text-[13px] text-foreground">{c.id}</div>
                   <div className="text-[11px] text-muted-foreground">{c.booking} · {c.facility}</div>
@@ -104,7 +114,15 @@ export const ContainerTable = () => {
         </tbody>
       </table>
       <PhytoSheet container={phytoFor} open={!!phytoFor} onClose={() => setPhytoFor(null)} />
-      <ErdLrdSheet container={erdFor} open={!!erdFor} onClose={() => setErdFor(null)} />
+      <ErdLrdSheet
+        container={erdFor}
+        open={!!erdFor}
+        onClose={() => setErdFor(null)}
+        onSaved={(id) => {
+          setFlashId(id);
+          setTimeout(() => setFlashId(null), 1800);
+        }}
+      />
     </section>
   );
 };
