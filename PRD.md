@@ -1,4 +1,4 @@
-# Nomos — Product Requirements Document
+# Nomos — Living Product Requirements Document
 
 _Prototype PRD extracted from the current build of the Nomos Export Command Center._
 _Last updated: 2026-05-09_
