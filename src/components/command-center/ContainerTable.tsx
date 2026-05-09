@@ -61,7 +61,7 @@ export const ContainerTable = () => {
             return (
               <tr
                 key={c.id}
-                className={`hover:bg-secondary/40 transition-colors duration-700 ${
+                className={`hover:bg-secondary/40 transition-colors duration-700 [&>td]:py-1.5 ${
                   flashId === c.id
                     ? "bg-success/20"
                     : c.status === "action"
@@ -69,34 +69,34 @@ export const ContainerTable = () => {
                     : ""
                 }`}
               >
-                <td className="px-5 py-3">
+                <td className="px-5">
                   <div className="font-mono text-[13px] text-foreground">{c.id}</div>
                   <div className="text-[11px] text-muted-foreground">{c.booking} · {c.facility}</div>
                 </td>
-                <td className="px-3 py-3">
+                <td className="px-3">
                   <div className="text-foreground">{c.vessel}</div>
                   <div className="text-[11px] text-muted-foreground">Voy {c.voyage}</div>
                 </td>
-                <td className="px-3 py-3 text-foreground/90">
+                <td className="px-3 text-foreground/90">
                   <div>{c.pol} <span className="text-muted-foreground">→</span> {c.destination}</div>
                   <div className="text-[11px] text-muted-foreground">ETA {c.eta}</div>
                 </td>
-                <td className="px-3 py-3 text-foreground/90">
+                <td className="px-3 text-foreground/90">
                   {c.buyer}
                   <div className="text-[11px] text-muted-foreground truncate max-w-[180px]">{c.product}</div>
                 </td>
-                <td className="px-3 py-3 tabular-nums text-foreground/90">{c.cutoff}</td>
-                <td className="px-3 py-3">
+                <td className="px-3 tabular-nums text-foreground/90">{c.cutoff}</td>
+                <td className="px-3">
                   <PhytoCell container={c} onOpen={() => setPhytoFor(c)} />
                 </td>
-                <td className="px-3 py-3">
+                <td className="px-3">
                   {c.status === "action" ? (
                     <button
                       onClick={() => setErdFor(c)}
                       title="Update ERD / LRD"
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold ${b.className} hover:brightness-110 hover:ring-1 hover:ring-accent/50 transition`}
+                      className={`inline-flex items-center gap-1 px-1.5 py-[1px] rounded text-[10px] font-semibold ${b.className} hover:brightness-110 hover:ring-1 hover:ring-accent/50 transition`}
                     >
-                      <b.icon className="w-3 h-3" /> {b.label}
+                      <b.icon className="w-2.5 h-2.5" /> {b.label}
                     </button>
                   ) : (
                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold ${b.className}`}>
@@ -105,7 +105,7 @@ export const ContainerTable = () => {
                   )}
                   {c.alert && <div className="text-[11px] text-accent mt-1">{c.alert}</div>}
                 </td>
-                <td className="px-3 py-3 text-muted-foreground">
+                <td className="px-3 text-muted-foreground">
                   <MoreHorizontal className="w-4 h-4" />
                 </td>
               </tr>
