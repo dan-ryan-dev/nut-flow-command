@@ -14,7 +14,212 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      alerts: {
+        Row: {
+          acknowledged: boolean
+          booking_ref: string | null
+          code: string
+          container_ref: string | null
+          created_at: string
+          id: string
+          occurred_at: string
+          status_text: string
+          tag: string
+          tone: Database["public"]["Enums"]["alert_tone"]
+        }
+        Insert: {
+          acknowledged?: boolean
+          booking_ref?: string | null
+          code: string
+          container_ref?: string | null
+          created_at?: string
+          id?: string
+          occurred_at?: string
+          status_text: string
+          tag: string
+          tone?: Database["public"]["Enums"]["alert_tone"]
+        }
+        Update: {
+          acknowledged?: boolean
+          booking_ref?: string | null
+          code?: string
+          container_ref?: string | null
+          created_at?: string
+          id?: string
+          occurred_at?: string
+          status_text?: string
+          tag?: string
+          tone?: Database["public"]["Enums"]["alert_tone"]
+        }
+        Relationships: []
+      }
+      carriers: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+          scac: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+          scac: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+          scac?: string
+        }
+        Relationships: []
+      }
+      containers: {
+        Row: {
+          alert: string | null
+          booking_id: string
+          buyer: string
+          container_id: string
+          created_at: string
+          cutoff: string
+          destination: string
+          eta: string
+          eta_delayed: boolean
+          facility: string
+          logistics_status: Database["public"]["Enums"]["logistics_status"]
+          lots: string[]
+          phyto_complete: boolean
+          pod: string
+          pol: string
+          product: string
+          shipment_week: string
+          status: Database["public"]["Enums"]["container_status"]
+          updated_at: string
+          vessel: string
+          voyage: string
+          weight_kg: number
+        }
+        Insert: {
+          alert?: string | null
+          booking_id: string
+          buyer: string
+          container_id: string
+          created_at?: string
+          cutoff: string
+          destination: string
+          eta: string
+          eta_delayed?: boolean
+          facility: string
+          logistics_status?: Database["public"]["Enums"]["logistics_status"]
+          lots?: string[]
+          phyto_complete?: boolean
+          pod: string
+          pol: string
+          product: string
+          shipment_week: string
+          status?: Database["public"]["Enums"]["container_status"]
+          updated_at?: string
+          vessel: string
+          voyage: string
+          weight_kg: number
+        }
+        Update: {
+          alert?: string | null
+          booking_id?: string
+          buyer?: string
+          container_id?: string
+          created_at?: string
+          cutoff?: string
+          destination?: string
+          eta?: string
+          eta_delayed?: boolean
+          facility?: string
+          logistics_status?: Database["public"]["Enums"]["logistics_status"]
+          lots?: string[]
+          phyto_complete?: boolean
+          pod?: string
+          pol?: string
+          product?: string
+          shipment_week?: string
+          status?: Database["public"]["Enums"]["container_status"]
+          updated_at?: string
+          vessel?: string
+          voyage?: string
+          weight_kg?: number
+        }
+        Relationships: []
+      }
+      documents: {
+        Row: {
+          booking_id: string
+          created_at: string
+          doc_type: Database["public"]["Enums"]["doc_type"]
+          file_url: string | null
+          id: string
+          notes: string | null
+          status: Database["public"]["Enums"]["doc_status"]
+          updated_at: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          doc_type: Database["public"]["Enums"]["doc_type"]
+          file_url?: string | null
+          id?: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["doc_status"]
+          updated_at?: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          doc_type?: Database["public"]["Enums"]["doc_type"]
+          file_url?: string | null
+          id?: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["doc_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      logistics_events: {
+        Row: {
+          container_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          occurred_at: string
+          status: Database["public"]["Enums"]["logistics_status"]
+        }
+        Insert: {
+          container_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          occurred_at?: string
+          status: Database["public"]["Enums"]["logistics_status"]
+        }
+        Update: {
+          container_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          occurred_at?: string
+          status?: Database["public"]["Enums"]["logistics_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "logistics_events_container_id_fkey"
+            columns: ["container_id"]
+            isOneToOne: false
+            referencedRelation: "containers"
+            referencedColumns: ["container_id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +228,22 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      alert_tone: "danger" | "warning" | "info"
+      container_status:
+        | "action"
+        | "in-transit"
+        | "at-port"
+        | "delivered"
+        | "draft"
+      doc_status: "attached" | "draft" | "missing"
+      doc_type: "phyto" | "bol" | "commercial-invoice" | "packing-list"
+      logistics_status:
+        | "pending-load"
+        | "origin-received"
+        | "gated-in"
+        | "loaded-vessel"
+        | "arrived-discharge"
+        | "closed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +370,25 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      alert_tone: ["danger", "warning", "info"],
+      container_status: [
+        "action",
+        "in-transit",
+        "at-port",
+        "delivered",
+        "draft",
+      ],
+      doc_status: ["attached", "draft", "missing"],
+      doc_type: ["phyto", "bol", "commercial-invoice", "packing-list"],
+      logistics_status: [
+        "pending-load",
+        "origin-received",
+        "gated-in",
+        "loaded-vessel",
+        "arrived-discharge",
+        "closed",
+      ],
+    },
   },
 } as const
