@@ -7,7 +7,8 @@ const nav = [
   { icon: Ship, label: "Vessels & ETAs", to: "#" },
   { icon: FileText, label: "Phyto Certificates", to: "#" },
   { icon: Building2, label: "Facilities", to: "#" },
-  { icon: Bell, label: "Alerts", to: "#" },
+  { icon: Bell, label: "Alerts", to: "/alerts" },
+  { icon: Settings, label: "Settings", to: "/settings" },
 ];
 
 const facilities = [
