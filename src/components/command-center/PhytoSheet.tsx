@@ -1,9 +1,10 @@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Container } from "@/data/containers";
-import { AlertTriangle, CheckCircle2, FileText, Sparkles, ShieldCheck, Stamp, FileSearch } from "lucide-react";
+import { AlertTriangle, CheckCircle2, FileText, Sparkles, ShieldCheck, Stamp, FileSearch, Upload, RefreshCw, Send, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PhytoPdfPreview } from "./PhytoPdfPreview";
+import { phytoStore } from "@/state/phytoStore";
 
 interface PhytoSheetProps {
   container: Container | null;
@@ -62,6 +63,46 @@ export const PhytoSheet = ({ container, open, onClose }: PhytoSheetProps) => {
   const blocks = Array.from(new Set(fields.map((f) => f.block)));
   const [previewOpen, setPreviewOpen] = useState(false);
 
+  // Deterministic per-container fetch state for demo (matches ErdLrdSheet pattern).
+  // Most containers → "ready"; a couple route to "loading"/"empty"/"error" for demo.
+  type FetchState = "loading" | "ready" | "empty" | "error";
+  const hash = Array.from(container.id).reduce((a, ch) => a + ch.charCodeAt(0), 0);
+  const target: FetchState =
+    hash % 17 === 0 ? "empty" : hash % 13 === 0 ? "error" : "ready";
+  const [fetchState, setFetchState] = useState<FetchState>("loading");
+  useEffect(() => {
+    if (!open) return;
+    setFetchState("loading");
+    const t = setTimeout(() => setFetchState(target), 850);
+    return () => clearTimeout(t);
+  }, [open, container.id, target]);
+
+  // Verification footer fields — required for USDA submission.
+  const [sealNumber, setSealNumber] = useState("");
+  const [containerIdInput, setContainerIdInput] = useState(container.id);
+  const [validationError, setValidationError] = useState<string | null>(null);
+  useEffect(() => {
+    if (open) {
+      setSealNumber("");
+      setContainerIdInput(container.id);
+      setValidationError(null);
+    }
+  }, [open, container.id]);
+
+  const handleSubmit = () => {
+    if (!sealNumber.trim() || !containerIdInput.trim()) {
+      setValidationError("REQUIRED: USDA Phyto requires a verified Seal Number.");
+      return;
+    }
+    setValidationError(null);
+    phytoStore.markPending(container.booking);
+    toast.success("Submission Pending", {
+      description: `${container.id} routed to USDA PCIT · awaiting officer signature`,
+      className: "border-success/40",
+    });
+    onClose();
+  };
+
   return (
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
       <SheetContent side="right" className="w-full sm:max-w-2xl p-0 overflow-y-auto bg-background">
@@ -96,6 +137,12 @@ export const PhytoSheet = ({ container, open, onClose }: PhytoSheetProps) => {
           </div>
         </SheetHeader>
 
+        {fetchState === "loading" && <ManifestSkeleton />}
+        {fetchState === "empty" && <EmptyDraftState />}
+        {fetchState === "error" && <ErrorDraftState onRetry={() => setFetchState("loading")} />}
+
+        {fetchState === "ready" && (
+        <>
         {/* AI assist strip */}
         <div className="mx-6 mt-4 p-3 rounded-md border border-accent/30 bg-accent-soft flex gap-3">
           <Sparkles className="w-4 h-4 text-accent shrink-0 mt-0.5" />
@@ -169,6 +216,44 @@ export const PhytoSheet = ({ container, open, onClose }: PhytoSheetProps) => {
           })}
         </div>
 
+        {/* Verification block — required for USDA submission */}
+        <div className="px-6 pb-5">
+          <section className="border border-border rounded-md overflow-hidden">
+            <div className="px-4 py-2 bg-secondary/60 border-b border-border flex items-center justify-between">
+              <div className="text-[11px] uppercase tracking-wider font-semibold text-foreground/80 flex items-center gap-2">
+                <ShieldAlert className="w-3 h-3 text-accent" /> V. Verification & Seal
+              </div>
+              <span className="text-[10px] uppercase tracking-widest text-accent font-semibold">required</span>
+            </div>
+            <div className="grid grid-cols-2 gap-px bg-border">
+              <label className="bg-card px-4 py-3 flex flex-col gap-1">
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Container ID</span>
+                <input
+                  value={containerIdInput}
+                  onChange={(e) => setContainerIdInput(e.target.value)}
+                  className="font-mono text-sm bg-transparent border-b border-border focus:border-accent outline-none py-1"
+                />
+              </label>
+              <label className="bg-card px-4 py-3 flex flex-col gap-1">
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Seal Number</span>
+                <input
+                  value={sealNumber}
+                  onChange={(e) => setSealNumber(e.target.value)}
+                  placeholder="e.g. SL-7821934"
+                  className="font-mono text-sm bg-transparent border-b border-border focus:border-accent outline-none py-1 placeholder:text-muted-foreground/50"
+                />
+              </label>
+            </div>
+            {validationError && (
+              <div className="px-4 py-2.5 bg-destructive/10 border-t border-destructive/40 flex items-center gap-2 text-[12px] font-semibold text-destructive uppercase tracking-wider">
+                <AlertTriangle className="w-3.5 h-3.5" /> {validationError}
+              </div>
+            )}
+          </section>
+        </div>
+        </>
+        )}
+
         {/* Sticky action bar */}
         <div className="sticky bottom-0 bg-card border-t border-border px-6 py-3 flex items-center gap-3">
           <div className="text-[11px] text-muted-foreground">
@@ -179,11 +264,20 @@ export const PhytoSheet = ({ container, open, onClose }: PhytoSheetProps) => {
           </button>
           <button
             onClick={() => setPreviewOpen(true)}
-            className="text-sm font-semibold px-3 py-1.5 rounded-md text-accent-foreground inline-flex items-center gap-1.5"
-            style={{ backgroundImage: "var(--gradient-action)" }}
+            disabled={fetchState !== "ready"}
+            className="text-sm font-semibold px-3 py-1.5 rounded-md border border-border text-foreground hover:bg-secondary inline-flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <FileSearch className="w-3.5 h-3.5" />
-            Preview Draft PDF
+            Preview Draft
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={fetchState !== "ready"}
+            className="text-sm font-semibold px-3 py-1.5 rounded-md text-accent-foreground inline-flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{ backgroundImage: "var(--gradient-action)" }}
+          >
+            <Send className="w-3.5 h-3.5" />
+            Submit to USDA
           </button>
         </div>
         <PhytoPdfPreview
@@ -196,3 +290,63 @@ export const PhytoSheet = ({ container, open, onClose }: PhytoSheetProps) => {
     </Sheet>
   );
 };
+
+const ManifestSkeleton = () => (
+  <div className="px-6 py-5 space-y-4">
+    <div className="flex items-center gap-2 text-[11px] uppercase tracking-widest text-muted-foreground">
+      <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+      Extracting fields from booking record…
+    </div>
+    {[0, 1, 2].map((b) => (
+      <div key={b} className="border border-border rounded-md overflow-hidden">
+        <div className="px-4 py-2 bg-secondary/60 border-b border-border">
+          <div className="h-3 w-48 rounded bg-foreground/10 animate-pulse" />
+        </div>
+        <div className="divide-y divide-border">
+          {[0, 1, 2, 3].map((r) => (
+            <div key={r} className="grid grid-cols-[200px_1fr_80px] gap-4 px-4 py-3 items-center">
+              <div className="h-2.5 rounded bg-foreground/10 animate-pulse" />
+              <div className="space-y-1.5">
+                <div className="h-3 rounded bg-foreground/10 animate-pulse" style={{ width: `${60 + ((b + r) * 7) % 35}%` }} />
+                <div className="h-2 rounded bg-foreground/5 animate-pulse w-1/3" />
+              </div>
+              <div className="h-4 rounded bg-foreground/10 animate-pulse" />
+            </div>
+          ))}
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
+const EmptyDraftState = () => (
+  <div className="px-6 py-10 flex flex-col items-center text-center">
+    <div className="w-12 h-12 rounded-md border border-dashed border-border flex items-center justify-center text-muted-foreground">
+      <Upload className="w-5 h-5" />
+    </div>
+    <div className="mt-3 text-sm font-semibold text-foreground">No draft found</div>
+    <div className="mt-1 text-xs text-muted-foreground max-w-sm">
+      Please upload a Sales Contract PDF to initiate Phyto-ready logic.
+    </div>
+    <button className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md text-accent-foreground" style={{ backgroundImage: "var(--gradient-action)" }}>
+      <Upload className="w-3.5 h-3.5" /> Upload Sales Contract
+    </button>
+  </div>
+);
+
+const ErrorDraftState = ({ onRetry }: { onRetry: () => void }) => (
+  <div className="mx-6 mt-4 border border-destructive/40 bg-destructive/5 rounded-md px-4 py-4">
+    <div className="flex items-start gap-3">
+      <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-semibold text-destructive uppercase tracking-wider">Draft generation failed</div>
+        <div className="text-xs text-foreground mt-1">
+          Manual entry required for BRC/USDA compliance.
+        </div>
+      </div>
+      <button onClick={onRetry} className="text-xs font-semibold px-2.5 py-1 rounded-md border border-border bg-card hover:bg-secondary inline-flex items-center gap-1.5">
+        <RefreshCw className="w-3 h-3" /> Retry
+      </button>
+    </div>
+  </div>
+);
