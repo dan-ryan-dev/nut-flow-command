@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { containers, type Container } from "@/data/containers";
-import { AlertTriangle, CheckCircle2, Ship, Anchor, FileText, MoreHorizontal, Paperclip } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Ship, Anchor, FileText, MoreHorizontal, Paperclip, Clock } from "lucide-react";
 import { PhytoSheet } from "./PhytoSheet";
 import { ErdLrdSheet } from "./ErdLrdSheet";
-import { usePhytoAttached } from "@/state/phytoStore";
+import { usePhytoAttached, usePhytoPending } from "@/state/phytoStore";
 
 const statusBadge = (s: Container["status"]) => {
   switch (s) {
@@ -129,6 +129,17 @@ export const ContainerTable = () => {
 
 const PhytoCell = ({ container, onOpen }: { container: Container; onOpen: () => void }) => {
   const attached = usePhytoAttached(container.booking);
+  const pending = usePhytoPending(container.booking);
+  if (pending) {
+    return (
+      <span
+        className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-success/10 text-success border border-success/30"
+        title="Submitted to USDA PCIT — awaiting officer signature"
+      >
+        <Clock className="w-3 h-3" /> Pending
+      </span>
+    );
+  }
   if (attached) {
     return (
       <button
