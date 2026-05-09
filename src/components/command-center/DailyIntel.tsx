@@ -77,7 +77,7 @@ export const DailyIntel = () => {
             <b.icon className={`w-4 h-4 mt-0.5 shrink-0 ${iconStyles[b.tone]}`} />
             <div className="flex-1 min-w-0">
               <div className="text-sm font-semibold text-foreground">{b.title}</div>
-              <div className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{b.body}</div>
+              <div className="text-xs font-light text-muted-foreground mt-0.5 leading-relaxed">{b.body}</div>
             </div>
             <button className="self-start text-xs font-semibold text-primary hover:text-accent flex items-center gap-0.5 shrink-0">
               {b.cta} <ChevronRight className="w-3.5 h-3.5" />
