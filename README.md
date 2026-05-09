@@ -1,122 +1,66 @@
-# Nomos — Export Command Center
+# Nomos — Logistics Command Center (Prototype)
 
-A clickable prototype of an AI-assisted operations cockpit for an almond-export
-desk. The app sits on top of a fictional canonical database ("Nomos DB") and
-demonstrates how a single, grounded source of truth plus light AI tooling can
-collapse the busywork of phyto certificates, container tracking, and carrier
-booking entry.
+A clickable React prototype of a logistics command center for an ag-export operation. It demonstrates how a single canonical record (the "Nomos DB") collapses today's split between booking systems, doc storage, and spreadsheets into one ledger that drives a dashboard, an export ledger, alerts, and a USDA Phyto certification flow.
 
-## Hypothesis
+For full context — problem, users, screens, hypothesis, metrics, what's mocked vs. real — see [`PRD.md`](./PRD.md). The prompts used to generate the prototype are in [`PROMPTS.md`](./PROMPTS.md).
 
-Export operators don't lose money on shipping — they lose it on
-**documentation drift**. Phytosanitary fields live in PDFs, booking confirmations
-arrive as email attachments, and container status hops between carrier portals
-and whiteboards. If every field is written once into a canonical ledger and an
-AI agent reads from that ledger, the team can:
+## App Flow
 
-- Catch missing USDA Form 577 fields *before* the carrier cutoff.
-- Log a new booking from a carrier PDF in seconds instead of minutes.
-- Answer "where is lot 447W?" in natural language without opening five tabs.
-- Eliminate demurrage caused by paperwork, not logistics.
+1. **Command Center** (`/`) — KPIs, Daily Intel briefings, container table. Entry point. `⌘K` opens the AI Command Bar; "New booking" opens the PDF intake flow.
+2. **Containers Ledger** (`/containers`) — Searchable, filterable canonical ledger grouped by shipment week. Hover any row for a Doc Storage quick-look; row clicks open the Phyto or ERD/LRD side-panels.
+3. **Alerts** (`/alerts`) — Active and historical alerts (cutoffs, demurrage risk, missing docs). Acknowledge to move into history.
+4. **Settings** (`/settings`) — Carriers, facilities, buyers, integrations.
+5. **Phyto Certification Side-Panel** — USDA PPQ-577 form, fields auto-drafted from the ledger; flags missing fields; can attach a draft cert that propagates to the table chip and the Doc Storage hover-card.
+6. **ERD/LRD Side-Panel** — Edit Earliest Receiving Date / Latest Receiving Date with carrier-feed cross-check, history, and offline/error states.
 
-The prototype is built to make that hypothesis feel real in a demo.
+## Project Structure
 
-## Scenario
-
-You are the export coordinator at **Capay Canyon Ranch**, shipping almonds out
-of Oakland to buyers in the EU and APAC. It's Monday of Week 19. Forty-two
-containers are active across four facilities; three are at risk of missing
-Friday's MSC LORETO cutoff because their Phyto certificates are incomplete.
-The Nomos cockpit is your morning briefing, your search bar, and your
-document workbench in one screen.
-
-## Key Screens
-
-### 1. Command Center (`/`)
-- **Daily Intel briefing** — four AI-generated cards grounded in Nomos DB and
-  live port feeds (cutoff risk, port congestion, lineage, performance).
-- **KPI strip** — containers this week, action required, real-time logging
-  rate, demurrage risk.
-- **This week's container table** — quick triage view with a dedicated
-  **Phyto** column that shows "Missing", "Complete", or "Draft Attached".
-- **Command bar (`⌘K`)** — randomized natural-language suggestions, simulated
-  AI processing, and a "Grounded in Nomos DB" trust badge.
-- **PDF booking flow** — drop a carrier PDF, watch 14 fields auto-fill.
-
-### 2. Phyto slide-over + PDF Preview
-- Opens from the Phyto column. Shows the missing USDA Form 577 fields drawn
-  from the booking record.
-- "Preview Draft PDF" renders a high-fidelity Form 577 populated with
-  Nomos DB data.
-- "Attach to Booking BK-99182" writes the draft into the booking's Doc
-  Storage, flips the doc-task status to *Drafted*, and turns the table
-  badge into a blue **Draft Attached** pill.
-
-### 3. Containers Ledger (`/containers`)
-- Central shipment ledger grouped by **Shipment Week** (collapsible).
-- Columns: Container #, Booking #, Lot ID (multi-lot badges), Buyer,
-  Status, Docs.
-- Logistics statuses: Pending Load · Origin Received · Gated-in · On Vessel
-  · At POD · Closed. Closed rows dim and sort to the bottom of their week.
-- Docs hover-card "quick-look" panel for Phyto / BOL / Commercial Invoice /
-  Packing List, kept in sync with the Phyto attachment store.
-- "Show Issues Only" filter and "Export to CSV" action.
-
-## User Flow
-
-1. Operator lands on the **Command Center** and reads the Daily Intel
-   briefing. The top alert flags 3 containers at risk of missing Friday's
-   cutoff.
-2. Operator clicks **Review 3 phytos** (or the Missing badge on a row) and
-   the **Phyto slide-over** opens for `BK-99182`.
-3. Operator clicks **Preview Draft PDF** → modal renders the populated
-   USDA Form 577.
-4. Operator clicks **Attach to Booking BK-99182** → toast confirms
-   "Draft attached to BK-99182 in Nomos Doc Storage". The Phyto column
-   badge changes to **Draft Attached**.
-5. Operator hits `⌘K`, asks *"Find all containers associated with Lot ID
-   447W"* and gets a grounded answer in ~1.5s.
-6. Operator opens **Containers** from the sidebar to verify the same draft
-   shows up in that booking's Docs hover-card, then exports the week's
-   ledger to CSV.
-7. As loads complete, statuses move through to **Closed**, which dims the
-   row and pushes it to the bottom of its Shipment Week group.
-
-## Main Build Decisions
-
-- **Stack**: React 18 + Vite + TypeScript, Tailwind CSS, shadcn/ui,
-  React Router, TanStack Query. No backend — this is a frontend prototype.
-- **Design system**: Modern industrial palette (navy / white / safety
-  orange) defined as HSL semantic tokens in `src/index.css` and
-  `tailwind.config.ts`. Components consume tokens (`bg-primary`,
-  `text-accent`, `bg-accent-soft`) rather than raw colors so the look stays
-  consistent across both pages.
-- **State**: Local component state plus a tiny external store
-  (`src/state/phytoStore.ts`) using `useSyncExternalStore` so attaching a
-  Phyto draft on the Command Center reflects instantly in the Containers
-  ledger without a global state library.
-- **Data**: Seed data lives in `src/data/containers.ts` (containers, lots,
-  shipment weeks, doc states). Everything is deterministic so the demo
-  reads the same way every time, except for randomized command-bar
-  suggestions and AI fallback answers.
-- **AI surfaces are simulated**: command-bar processing uses a 1.5s timer
-  to feel like a real agent call, and answers are pre-written per
-  suggestion. The "Grounded in Nomos DB" badge is the visual anchor for
-  the trust story.
-- **Status badges**: Centralized in `src/components/containers/StatusBadge.tsx`
-  with `inline-flex`, fixed `min-width`, and a 6px icon-text gap so the
-  ledger columns don't shift as statuses change.
-- **Routing**: `/` is the Command Center, `/containers` is the ledger.
-  Sidebar uses `NavLink`s for active state.
-- **Out of scope**: real auth, persistence, carrier API integrations, and
-  CSV server-side generation. The CSV export is a client-side Blob.
-
-## Run Locally
-
-```bash
-npm install
-npm run dev
+```text
+src/
+  features/                       # Feature-scoped UI + state
+    command-center/
+      CommandCenterPage.tsx       # / route
+      components/                 # CommandBar, ContainerTable, DailyIntel,
+                                  #   PdfBookingFlow, KpiStrip
+    containers/
+      ContainersLedgerPage.tsx    # /containers route
+      components/                 # ContainerLedger, DocsHoverCard, StatusBadge
+    phyto/
+      components/                 # PhytoCertificationPanel, PhytoPdfPreview
+      state/phytoStore.ts         # Cross-screen Phyto draft/attached state
+    erd-lrd/
+      components/                 # ErdLrdPanel
+    alerts/AlertsPage.tsx         # /alerts route
+    settings/SettingsPage.tsx     # /settings route
+  shared/
+    components/Sidebar.tsx        # App nav, used by every page
+    data/
+      types.ts                    # Container, LogisticsStatus, DocStatus
+      containers.ts               # Deterministic seed data ("Nomos DB")
+    hooks/useContainers.ts        # Selectors: useAllContainers,
+                                  #   useActionRequiredContainers,
+                                  #   useContainersByWeek, isIssueRow
+  components/ui/                  # shadcn primitives
+  pages/NotFound.tsx              # 404
+  App.tsx                         # Router wiring
 ```
 
-Then open the printed local URL. Press `⌘K` (or `Ctrl+K`) to try the
-command bar.
+### Data Layer
+
+All shipment data flows through `src/shared/`:
+
+- **`data/types.ts`** — Pure type definitions. Display components import these without pulling in seed data.
+- **`data/containers.ts`** — The seed ledger. Deterministic so the demo reads the same way every load. Swap this module for an API/Cloud client later.
+- **`hooks/useContainers.ts`** — Selectors. Components consume these instead of importing the seed array directly, so the data source can be swapped without touching the UI.
+- **`features/phyto/state/phytoStore.ts`** — Lightweight `useSyncExternalStore` for cross-screen Phyto state (drafts attached on the side-panel reflect instantly in the table chip and Doc Storage hover-card).
+
+### Conventions
+
+- One feature per folder. A feature owns its page component, its UI components, and any feature-local state.
+- Anything imported by 2+ features lives in `src/shared/`.
+- Routing is centralized in `App.tsx`.
+- Design tokens (HSL) in `src/index.css` and `tailwind.config.ts`. Components use semantic Tailwind classes — no hardcoded colors.
+
+## Out of Scope
+
+This is a prototype. There is no real backend, no auth, no live carrier feeds. See "What is mocked vs. real" in [`PRD.md`](./PRD.md).

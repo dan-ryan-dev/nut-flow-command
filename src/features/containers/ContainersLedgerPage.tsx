@@ -1,21 +1,10 @@
 import { useMemo, useState } from "react";
-import { Sidebar } from "@/components/command-center/Sidebar";
-import { ContainerLedger } from "@/components/containers/ContainerLedger";
-import { containers, Container } from "@/data/containers";
+import { Sidebar } from "@/shared/components/Sidebar";
+import { ContainerLedger } from "@/features/containers/components/ContainerLedger";
+import type { Container } from "@/shared/data/types";
+import { useAllContainers, isIssueRow } from "@/shared/hooks/useContainers";
 import { Switch } from "@/components/ui/switch";
 import { Search, Download } from "lucide-react";
-import { phytoStore } from "@/state/phytoStore";
-
-const isIssueRow = (c: Container) => {
-  const phytoMissing = c.docs.phyto === "missing" && !phytoStore.isAttached(c.booking);
-  return (
-    phytoMissing ||
-    c.docs.bol === "missing" ||
-    c.docs.commercialInvoice === "missing" ||
-    c.docs.packingList === "missing" ||
-    !!c.etaDelayed
-  );
-};
 
 const toCsv = (rows: Container[]) => {
   const header = ["Container", "Booking", "Lots", "Buyer", "Destination", "Status", "Docs", "Shipment Week"];
@@ -28,9 +17,10 @@ const toCsv = (rows: Container[]) => {
   return [header.join(","), ...lines].join("\n");
 };
 
-const Containers = () => {
+const ContainersLedgerPage = () => {
   const [issuesOnly, setIssuesOnly] = useState(false);
   const [query, setQuery] = useState("");
+  const containers = useAllContainers();
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -44,7 +34,7 @@ const Containers = () => {
         c.lots.some((l) => l.toLowerCase().includes(q))
       );
     });
-  }, [issuesOnly, query]);
+  }, [issuesOnly, query, containers]);
 
   const exportCsv = () => {
     const blob = new Blob([toCsv(filtered)], { type: "text/csv;charset=utf-8" });
@@ -124,4 +114,4 @@ const Kpi = ({ label, value, sub, tone = "default" }: { label: string; value: st
   </div>
 );
 
-export default Containers;
+export default ContainersLedgerPage;

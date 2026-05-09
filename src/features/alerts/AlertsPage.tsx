@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Sidebar } from "@/components/command-center/Sidebar";
+import { Sidebar } from "@/shared/components/Sidebar";
 import { AlertTriangle, Check } from "lucide-react";
 import { toast } from "sonner";
 
@@ -34,7 +34,7 @@ const toneStyles: Record<AlertItem["tone"], string> = {
   info: "bg-secondary text-foreground/70 border-border",
 };
 
-const Alerts = () => {
+const AlertsPage = () => {
   const [tab, setTab] = useState<"active" | "history">("active");
   const [active, setActive] = useState(seed);
   const [history, setHistory] = useState(historySeed);
@@ -120,4 +120,4 @@ const Alerts = () => {
   );
 };
 
-export default Alerts;
+export default AlertsPage;

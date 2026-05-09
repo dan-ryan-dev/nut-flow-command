@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { Search, Sparkles, Plus, Anchor, Bell } from "lucide-react";
 import { toast } from "sonner";
-import { Sidebar } from "@/components/command-center/Sidebar";
-import { CommandBar } from "@/components/command-center/CommandBar";
-import { PdfBookingFlow } from "@/components/command-center/PdfBookingFlow";
-import { DailyIntel } from "@/components/command-center/DailyIntel";
-import { ContainerTable } from "@/components/command-center/ContainerTable";
+import { Sidebar } from "@/shared/components/Sidebar";
+import { CommandBar } from "@/features/command-center/components/CommandBar";
+import { PdfBookingFlow } from "@/features/command-center/components/PdfBookingFlow";
+import { DailyIntel } from "@/features/command-center/components/DailyIntel";
+import { ContainerTable } from "@/features/command-center/components/ContainerTable";
+import { KpiStrip } from "@/features/command-center/components/KpiStrip";
 
-const Index = () => {
+const CommandCenterPage = () => {
   const [cmdOpen, setCmdOpen] = useState(false);
   const [pdfOpen, setPdfOpen] = useState(false);
 
@@ -70,33 +71,7 @@ const Index = () => {
 
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-[1400px] mx-auto px-6 py-6 space-y-6">
-            {/* Hero KPIs */}
-            <div className="grid grid-cols-4 gap-3">
-              {[
-                { label: "Containers this week", value: "42", sub: "vs 38 last wk", tone: "default" },
-                { label: "Action required", value: "3", sub: "Phyto + cutoffs", tone: "action" },
-                { label: "Logged real-time", value: "31 / 42", sub: "74% — up from 19%", tone: "good" },
-                { label: "Demurrage risk", value: "$0", sub: "0 incidents · 14 days", tone: "good" },
-              ].map((k) => (
-                <div
-                  key={k.label}
-                  className={`rounded-lg border p-4 ${
-                    k.tone === "action"
-                      ? "border-accent/40 bg-accent-soft"
-                      : k.tone === "good"
-                      ? "border-success/30 bg-success/5"
-                      : "border-border bg-card"
-                  }`}
-                >
-                  <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{k.label}</div>
-                  <div className={`text-2xl font-bold mt-1 tabular-nums ${k.tone === "action" ? "text-accent" : "text-foreground"}`}>
-                    {k.value}
-                  </div>
-                  <div className="text-[11px] text-muted-foreground mt-0.5">{k.sub}</div>
-                </div>
-              ))}
-            </div>
-
+            <KpiStrip />
             <DailyIntel />
             <ContainerTable />
 
@@ -126,4 +101,4 @@ const Index = () => {
   );
 };
 
-export default Index;
+export default CommandCenterPage;
