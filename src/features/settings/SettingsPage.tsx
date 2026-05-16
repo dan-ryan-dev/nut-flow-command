@@ -2,8 +2,23 @@ import { useState } from "react";
 import { Sidebar } from "@/shared/components/Sidebar";
 import { Plus, Pencil, Power } from "lucide-react";
 import { toast } from "sonner";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
-const tabs = [
+type Tab =
+  | "Shipping Lines"
+  | "Vessels"
+  | "Drayage Carriers"
+  | "Labs"
+  | "Terminals"
+  | "Products"
+  | "Pack Types"
+  | "Payment Terms"
+  | "Ports"
+  | "Buyers"
+  | "Alert Rules";
+
+const tabs: Tab[] = [
   "Shipping Lines",
   "Vessels",
   "Drayage Carriers",
@@ -15,68 +30,94 @@ const tabs = [
   "Ports",
   "Buyers",
   "Alert Rules",
-] as const;
+];
 
-type Tab = (typeof tabs)[number];
-
-const data: Record<Tab, { name: string; code: string; active: boolean }[]> = {
-  "Shipping Lines": [
-    { name: "CMA CGM", code: "CMDU", active: true },
-    { name: "Hapag Lloyd", code: "HLCU", active: true },
-    { name: "MSC", code: "MSCU", active: true },
-    { name: "Maersk", code: "MAEU", active: true },
-    { name: "ONE", code: "ONEY", active: true },
-    { name: "Evergreen", code: "EGLV", active: false },
-  ],
-  Vessels: [
-    { name: "MSC LORETO", code: "Voy 447W", active: true },
-    { name: "EVER GIVEN", code: "Voy 220E", active: true },
-    { name: "CMA CGM MARCO POLO", code: "Voy 118N", active: true },
-  ],
-  "Drayage Carriers": [
-    { name: "Central Valley Drayage", code: "CVDR", active: true },
-    { name: "Pacific Inland", code: "PINL", active: true },
-  ],
-  Labs: [
-    { name: "USDA Modesto", code: "USDA-MOD", active: true },
-    { name: "Salida Phyto Lab", code: "SAL-PHY", active: true },
-  ],
-  Terminals: [
-    { name: "Oakland Berth 57", code: "OAK-B57", active: true },
-    { name: "Oakland Berth 58", code: "OAK-B58", active: true },
-  ],
-  Products: [
-    { name: "Nonpareil Almonds 23/25", code: "ALM-2325", active: true },
-    { name: "Walnuts Chandler", code: "WAL-CHA", active: true },
-  ],
-  "Pack Types": [
-    { name: "VP Cartons 50lb", code: "VP-50", active: true },
-    { name: "Bulk Totes 1000lb", code: "BT-1000", active: true },
-  ],
-  "Payment Terms": [
-    { name: "Net 30", code: "N30", active: true },
-    { name: "CAD", code: "CAD", active: true },
-    { name: "Letter of Credit", code: "LOC", active: false },
-  ],
-  Ports: [
-    { name: "Port of Oakland", code: "USOAK", active: true },
-    { name: "Hamburg", code: "DEHAM", active: true },
-    { name: "Shanghai", code: "CNSHA", active: true },
-  ],
-  Buyers: [
-    { name: "Nordmann GmbH", code: "NORD-DE", active: true },
-    { name: "Shanghai Foods Co", code: "SHF-CN", active: true },
-  ],
-  "Alert Rules": [
-    { name: "Phyto missing < 48h cutoff", code: "RULE-01", active: true },
-    { name: "Demurrage risk > 7 days", code: "RULE-02", active: true },
-  ],
+// Maps each tab to (table, name column, code column). Carriers uses `scac`,
+// ports uses `unlocode`; everything else uses `code`.
+const tabConfig: Record<Tab, { table: string; codeKey: "code" | "scac" | "unlocode"; orgScoped: boolean }> = {
+  "Shipping Lines":   { table: "carriers",         codeKey: "scac",     orgScoped: true  },
+  Vessels:            { table: "vessels",          codeKey: "code",     orgScoped: true  },
+  "Drayage Carriers": { table: "drayage_carriers", codeKey: "code",     orgScoped: true  },
+  Labs:               { table: "labs",             codeKey: "code",     orgScoped: true  },
+  Terminals:          { table: "terminals",        codeKey: "code",     orgScoped: true  },
+  Products:           { table: "products",         codeKey: "code",     orgScoped: true  },
+  "Pack Types":       { table: "pack_types",       codeKey: "code",     orgScoped: true  },
+  "Payment Terms":    { table: "payment_terms",    codeKey: "code",     orgScoped: true  },
+  Ports:              { table: "ports",            codeKey: "unlocode", orgScoped: false },
+  Buyers:             { table: "buyers",           codeKey: "code",     orgScoped: true  },
+  "Alert Rules":      { table: "alert_rules",      codeKey: "code",     orgScoped: true  },
 };
+
+const DEFAULT_ORG = "00000000-0000-0000-0000-000000000001";
+
+type Row = { id: string; name: string; active: boolean } & Record<string, unknown>;
 
 const SettingsPage = () => {
   const [tab, setTab] = useState<Tab>("Shipping Lines");
-  const rows = data[tab];
-  const singular = tab.endsWith("s") ? tab.slice(0, -1) : tab;
+  const cfg = tabConfig[tab];
+  const qc = useQueryClient();
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["settings", cfg.table],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from(cfg.table as never)
+        .select(`id, name, active, ${cfg.codeKey}`)
+        .order("name");
+      if (error) throw error;
+      return (data ?? []) as Row[];
+    },
+  });
+
+  const addMut = useMutation({
+    mutationFn: async () => {
+      const stamp = Date.now().toString().slice(-5);
+      const payload: Record<string, unknown> = {
+        name: `New ${singular(tab)} ${stamp}`,
+        [cfg.codeKey]: `NEW-${stamp}`,
+        active: true,
+      };
+      if (cfg.orgScoped) payload.org_id = DEFAULT_ORG;
+      const { error } = await supabase.from(cfg.table as never).insert(payload as never);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success(`${singular(tab)} added`);
+      qc.invalidateQueries({ queryKey: ["settings", cfg.table] });
+    },
+    onError: (e: Error) => toast.error("Add failed", { description: e.message }),
+  });
+
+  const toggleMut = useMutation({
+    mutationFn: async (row: Row) => {
+      const { error } = await supabase
+        .from(cfg.table as never)
+        .update({ active: !row.active } as never)
+        .eq("id", row.id);
+      if (error) throw error;
+    },
+    onSuccess: (_d, row) => {
+      toast.success(`Toggled ${row.name}`);
+      qc.invalidateQueries({ queryKey: ["settings", cfg.table] });
+    },
+    onError: (e: Error) => toast.error("Toggle failed", { description: e.message }),
+  });
+
+  const renameMut = useMutation({
+    mutationFn: async ({ row, name }: { row: Row; name: string }) => {
+      const { error } = await supabase
+        .from(cfg.table as never)
+        .update({ name } as never)
+        .eq("id", row.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["settings", cfg.table] });
+    },
+    onError: (e: Error) => toast.error("Edit failed", { description: e.message }),
+  });
+
+  const rows = data ?? [];
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -93,7 +134,6 @@ const SettingsPage = () => {
 
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-[1400px] mx-auto px-6 py-6 space-y-4">
-            {/* Tab bar */}
             <div className="border-b border-border">
               <div className="flex flex-wrap gap-1">
                 {tabs.map((t) => (
@@ -112,39 +152,45 @@ const SettingsPage = () => {
               </div>
             </div>
 
-            {/* Action header */}
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-semibold text-foreground tracking-tight" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
                   {tab}
                 </h2>
-                <p className="text-xs text-muted-foreground mt-0.5">{rows.length} entries</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {isLoading ? "Loading…" : `${rows.length} entries`}
+                </p>
               </div>
               <button
-                onClick={() => toast.info(`Add ${singular} flow`)}
-                className="flex items-center gap-2 px-3.5 py-2 rounded-md text-sm font-semibold text-white bg-[hsl(220_15%_10%)] hover:bg-[hsl(220_15%_18%)] transition-colors"
+                onClick={() => addMut.mutate()}
+                disabled={addMut.isPending}
+                className="flex items-center gap-2 px-3.5 py-2 rounded-md text-sm font-semibold text-white bg-[hsl(220_15%_10%)] hover:bg-[hsl(220_15%_18%)] transition-colors disabled:opacity-50"
               >
                 <Plus className="w-3.5 h-3.5" />
-                Add {singular}
+                Add {singular(tab)}
               </button>
             </div>
 
-            {/* Table */}
             <div className="rounded-lg border border-border bg-card overflow-hidden">
               <table className="w-full text-sm">
                 <thead className="bg-secondary/60 text-[10px] uppercase tracking-widest text-muted-foreground">
                   <tr>
                     <th className="text-left px-5 py-2.5 font-medium">Name</th>
-                    <th className="text-left px-5 py-2.5 font-medium">SCAC / Code</th>
+                    <th className="text-left px-5 py-2.5 font-medium">{cfg.codeKey.toUpperCase()}</th>
                     <th className="text-left px-5 py-2.5 font-medium">Status</th>
                     <th className="text-right px-5 py-2.5 font-medium">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
+                  {!isLoading && rows.length === 0 && (
+                    <tr><td colSpan={4} className="px-5 py-10 text-center text-sm text-muted-foreground">
+                      No {tab.toLowerCase()} yet. Click Add to create the first one.
+                    </td></tr>
+                  )}
                   {rows.map((r) => (
-                    <tr key={r.code} className="hover:bg-secondary/40">
+                    <tr key={r.id} className="hover:bg-secondary/40">
                       <td className="px-5 py-3 font-medium text-foreground">{r.name}</td>
-                      <td className="px-5 py-3 font-mono text-xs text-foreground/70">{r.code}</td>
+                      <td className="px-5 py-3 font-mono text-xs text-foreground/70">{String(r[cfg.codeKey] ?? "")}</td>
                       <td className="px-5 py-3">
                         <span
                           className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full border ${
@@ -160,14 +206,17 @@ const SettingsPage = () => {
                       <td className="px-5 py-3">
                         <div className="flex items-center justify-end gap-1">
                           <button
-                            onClick={() => toast.info(`Edit ${r.name}`)}
+                            onClick={() => {
+                              const next = window.prompt(`Rename ${r.name} to:`, r.name);
+                              if (next && next !== r.name) renameMut.mutate({ row: r, name: next });
+                            }}
                             className="p-1.5 rounded hover:bg-secondary text-foreground/60 hover:text-foreground"
                             aria-label="Edit"
                           >
                             <Pencil className="w-3.5 h-3.5" />
                           </button>
                           <button
-                            onClick={() => toast.info(`Toggled ${r.name}`)}
+                            onClick={() => toggleMut.mutate(r)}
                             className="p-1.5 rounded hover:bg-secondary text-foreground/60 hover:text-foreground"
                             aria-label="Toggle"
                           >
@@ -186,5 +235,7 @@ const SettingsPage = () => {
     </div>
   );
 };
+
+const singular = (t: Tab) => (t.endsWith("s") ? t.slice(0, -1) : t);
 
 export default SettingsPage;
