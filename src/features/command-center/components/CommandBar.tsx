@@ -8,6 +8,8 @@ interface Props {
   open: boolean;
   onClose: () => void;
   onCreateBooking: () => void;
+  onSelectContainer?: (container: import("@/shared/data/types").Container) => void;
+  initialQuery?: string;
 }
 
 // Suggestion prompts only — no canned answers; AI integration lands in a later prompt.
@@ -28,7 +30,7 @@ const pickThree = () => {
   return arr.slice(0, 3);
 };
 
-export const CommandBar = ({ open, onClose, onCreateBooking }: Props) => {
+export const CommandBar = ({ open, onClose, onCreateBooking, onSelectContainer, initialQuery }: Props) => {
   const [q, setQ] = useState("");
   const [suggestions, setSuggestions] = useState(() => pickThree());
   const [processing, setProcessing] = useState(false);
@@ -52,12 +54,13 @@ export const CommandBar = ({ open, onClose, onCreateBooking }: Props) => {
     if (open) {
       setSuggestions(pickThree());
       setProcessing(false);
+      setQ(initialQuery ?? "");
       setTimeout(() => inputRef.current?.focus(), 30);
     } else {
       setQ("");
       setProcessing(false);
     }
-  }, [open]);
+  }, [open, initialQuery]);
 
   const runSuggestion = (label: string) => {
     setQ(label);
@@ -171,7 +174,14 @@ export const CommandBar = ({ open, onClose, onCreateBooking }: Props) => {
             <div className="p-2">
               <div className="px-2 py-1.5 text-[10px] uppercase tracking-widest text-muted-foreground">Containers</div>
               {matches.map((c) => (
-                <div key={c.id} className="flex items-center gap-3 px-2.5 py-2 rounded-md hover:bg-secondary cursor-pointer">
+                <button
+                  key={c.id}
+                  onClick={() => {
+                    onSelectContainer?.(c);
+                    onClose();
+                  }}
+                  className="w-full flex items-center gap-3 px-2.5 py-2 rounded-md hover:bg-secondary cursor-pointer text-left"
+                >
                   <ContainerIcon className="w-4 h-4 text-primary" />
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-mono text-foreground">{c.id}</div>
@@ -180,7 +190,7 @@ export const CommandBar = ({ open, onClose, onCreateBooking }: Props) => {
                     </div>
                   </div>
                   <CornerDownLeft className="w-3.5 h-3.5 text-muted-foreground" />
-                </div>
+                </button>
               ))}
             </div>
           )}
