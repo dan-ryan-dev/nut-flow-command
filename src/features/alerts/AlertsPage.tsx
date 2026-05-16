@@ -4,6 +4,7 @@ import { AlertTriangle, Check } from "lucide-react";
 import { toast } from "sonner";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/shared/auth/AuthProvider";
 
 type AlertRow = {
   id: string;
@@ -45,6 +46,8 @@ const AlertsPage = () => {
   const activeQ = useAlerts(false);
   const historyQ = useAlerts(true);
   const qc = useQueryClient();
+  const { role } = useAuth();
+  const canAck = role === "coordinator" || role === "admin";
 
   const ack = useMutation({
     mutationFn: async (id: string) => {
@@ -122,6 +125,7 @@ const AlertsPage = () => {
                   <div className="text-sm text-foreground/70 flex-1 truncate">{a.status_text}</div>
                   <div className="text-xs text-muted-foreground tabular-nums">{fmtTimestamp(a.occurred_at)}</div>
                   {tab === "active" ? (
+                    canAck ? (
                     <button
                       onClick={() => ack.mutate(a.id)}
                       disabled={ack.isPending}
@@ -129,6 +133,7 @@ const AlertsPage = () => {
                     >
                       <Check className="w-3 h-3" /> Acknowledge
                     </button>
+                    ) : null
                   ) : (
                     <span className="ml-2 text-[11px] uppercase tracking-wider text-success font-semibold">Resolved</span>
                   )}
