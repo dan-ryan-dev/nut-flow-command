@@ -1,8 +1,11 @@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import type { Container } from "@/shared/data/types";
-import { CalendarClock, Ship, AlertTriangle, Save, History, WifiOff, Inbox, RefreshCw, ShieldAlert } from "lucide-react";
+import { CalendarClock, Ship, AlertTriangle, Save, History, WifiOff, Inbox, ShieldAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { containersQueryKey } from "@/shared/hooks/useContainers";
 
 interface Props {
   container: Container | null;
@@ -11,68 +14,64 @@ interface Props {
   onSaved?: (containerId: string) => void;
 }
 
-const toLocalInput = (iso: string) => {
-  const [d, t = "12:00"] = iso.split(" ");
-  return `${d}T${t}`;
+const toLocalInput = (iso: string | null | undefined) => {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) {
+    const [date, time = "12:00"] = iso.split(" ");
+    return `${date}T${time}`;
+  }
+  return d.toISOString().slice(0, 16);
 };
 
-type FetchState = "loading" | "ready" | "empty" | "error";
-
-interface HistoryEntry {
-  ts: string;
-  user: string;
-  field: "ERD" | "LRD";
-  from: string;
-  to: string;
-  reason: string;
-}
-
-const hashCode = (s: string) => {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
-  return Math.abs(h);
-};
-
-const buildDemoHistory = (c: Container): HistoryEntry[] => [
-  { ts: "2026-05-02 14:22 PT", user: "M. Alvarez", field: "ERD", from: "2026-05-03 12:00", to: c.cutoff, reason: "Carrier rebook" },
-  { ts: "2026-04-29 09:11 PT", user: "carrier-edi", field: "LRD", from: "2026-05-12", to: c.eta, reason: "Vessel cutoff shift" },
-  { ts: "2026-04-26 17:48 PT", user: "T. Nguyen", field: "ERD", from: "2026-04-30 17:00", to: "2026-05-03 12:00", reason: "Port congestion" },
-];
+const toIso = (local: string) => (local ? new Date(local).toISOString() : null);
 
 export const ErdLrdPanel = ({ container, open, onClose, onSaved }: Props) => {
   const [erd, setErd] = useState("");
   const [lrd, setLrd] = useState("");
   const [reason, setReason] = useState("vessel-cutoff");
   const [notes, setNotes] = useState("");
-  const [fetchState, setFetchState] = useState<FetchState>("loading");
-  const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [validationError, setValidationError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const qc = useQueryClient();
 
-  const feedAgeMin = container ? (hashCode(container.id) % 240) + 5 : 0;
-  const isStale = feedAgeMin > 120;
-  const lastSyncLabel = (() => {
-    const d = new Date(Date.now() - feedAgeMin * 60_000);
-    return d.toISOString().replace("T", " ").slice(0, 16) + " UTC";
-  })();
+  // Pull live record (for erd/lrd/carrier_last_synced_at).
+  const { data: live } = useQuery({
+    queryKey: ["containers", container?.id, "erd-lrd"],
+    enabled: !!container && open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("containers")
+        .select("erd, lrd, carrier_last_synced_at")
+        .eq("container_id", container!.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Logistics-event history for this container.
+  const { data: history, isLoading: historyLoading } = useQuery({
+    queryKey: ["logistics_events", container?.id],
+    enabled: !!container && open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("logistics_events")
+        .select("occurred_at, status, notes")
+        .eq("container_id", container!.id)
+        .order("occurred_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
 
   useEffect(() => {
     if (!container || !open) return;
-    setErd(toLocalInput(container.cutoff));
-    setLrd(`${container.eta}T17:00`);
+    setErd(toLocalInput(live?.erd) || toLocalInput(container.cutoff));
+    setLrd(toLocalInput(live?.lrd) || `${container.eta}T17:00`);
     setReason("vessel-cutoff");
     setNotes("");
     setValidationError(null);
-    setFetchState("loading");
-
-    const bucket = hashCode(container.id) % 6;
-    const next: FetchState = bucket === 0 ? "error" : bucket === 1 ? "empty" : "ready";
-    const t = setTimeout(() => {
-      setFetchState(next);
-      setHistory(next === "ready" ? buildDemoHistory(container) : []);
-    }, 700);
-    return () => clearTimeout(t);
-  }, [container, open]);
+  }, [container, open, live]);
 
   useEffect(() => {
     if (erd && lrd && new Date(lrd) < new Date(erd)) {
@@ -82,19 +81,55 @@ export const ErdLrdPanel = ({ container, open, onClose, onSaved }: Props) => {
     }
   }, [erd, lrd]);
 
+  const save = useMutation({
+    mutationFn: async () => {
+      if (!container) return;
+      const { error: cErr } = await supabase
+        .from("containers")
+        .update({
+          erd: toIso(erd),
+          lrd: toIso(lrd),
+          carrier_last_synced_at: new Date().toISOString(),
+        })
+        .eq("container_id", container.id);
+      if (cErr) throw cErr;
+      // Log a history event
+      const { error: eErr } = await supabase.from("logistics_events").insert({
+        container_id: container.id,
+        status: container.logisticsStatus,
+        notes: `ERD/LRD updated · ${reason}${notes ? " · " + notes : ""}`,
+        org_id: "00000000-0000-0000-0000-000000000001",
+      });
+      if (eErr) throw eErr;
+    },
+    onSuccess: () => {
+      toast.success("Sync Successful", {
+        description: `${container?.id} · new ERD ${erd.replace("T", " ")} · LRD ${lrd.replace("T", " ")}`,
+      });
+      qc.invalidateQueries({ queryKey: containersQueryKey });
+      qc.invalidateQueries({ queryKey: ["logistics_events", container?.id] });
+      qc.invalidateQueries({ queryKey: ["containers", container?.id, "erd-lrd"] });
+      if (container) onSaved?.(container.id);
+      onClose();
+    },
+    onError: (e: Error) => toast.error("Save failed", { description: e.message }),
+  });
+
   if (!container) return null;
+
+  // Real latency badge — compute against carrier_last_synced_at.
+  const lastSyncIso = live?.carrier_last_synced_at;
+  const feedAgeMin = lastSyncIso
+    ? Math.floor((Date.now() - new Date(lastSyncIso).getTime()) / 60_000)
+    : null;
+  const isStale = feedAgeMin !== null && feedAgeMin > 120;
+  const lastSyncLabel = lastSyncIso
+    ? new Date(lastSyncIso).toISOString().replace("T", " ").slice(0, 16) + " UTC"
+    : "never";
 
   const onSave = () => {
     if (validationError) return;
-    setSaving(true);
-    setTimeout(() => {
-      toast.success("Sync Successful", {
-        description: `${container.id} · carrier EDI ack 200 · new ERD ${erd.replace("T", " ")} · LRD ${lrd.replace("T", " ")}`,
-      });
-      onSaved?.(container.id);
-      setSaving(false);
-      onClose();
-    }, 400);
+    save.mutate();
   };
 
   return (
@@ -120,7 +155,7 @@ export const ErdLrdPanel = ({ container, open, onClose, onSaved }: Props) => {
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-accent text-accent-foreground text-xs font-semibold">
                 <AlertTriangle className="w-3 h-3" /> Action required
               </span>
-              {isStale && (
+              {isStale && feedAgeMin !== null && (
                 <span
                   title={`Carrier feed last synced ${lastSyncLabel}`}
                   className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-widest bg-warning text-warning-foreground border border-warning/60"
@@ -155,11 +190,11 @@ export const ErdLrdPanel = ({ container, open, onClose, onSaved }: Props) => {
             <div className="grid grid-cols-2 divide-x divide-border">
               <div className="px-4 py-3">
                 <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Current ERD (cutoff)</div>
-                <div className="text-sm font-mono mt-1 text-foreground">{container.cutoff}</div>
+                <div className="text-sm font-mono mt-1 text-foreground">{live?.erd ?? container.cutoff}</div>
               </div>
               <div className="px-4 py-3">
                 <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Current ETA / LRD</div>
-                <div className="text-sm font-mono mt-1 text-foreground">{container.eta}</div>
+                <div className="text-sm font-mono mt-1 text-foreground">{live?.lrd ?? container.eta}</div>
               </div>
             </div>
           </section>
@@ -239,66 +274,43 @@ export const ErdLrdPanel = ({ container, open, onClose, onSaved }: Props) => {
           <section className="border border-border rounded-md overflow-hidden">
             <div className="px-4 py-2 bg-secondary/60 border-b border-border flex items-center justify-between">
               <div className="text-[11px] uppercase tracking-wider font-semibold text-foreground/80 flex items-center gap-2">
-                <History className="w-3 h-3 text-primary" /> Adjustment history · manifest log
+                <History className="w-3 h-3 text-primary" /> Logistics event log
               </div>
               <span className="text-[10px] font-mono text-muted-foreground">
-                {fetchState === "ready" ? `${history.length} entries` : "—"}
+                {history ? `${history.length} entries` : "—"}
               </span>
             </div>
 
-            {fetchState === "loading" && <HistorySkeleton />}
+            {historyLoading && <HistorySkeleton />}
 
-            {fetchState === "empty" && (
+            {!historyLoading && history && history.length === 0 && (
               <div className="px-4 py-8 text-center">
                 <Inbox className="w-6 h-6 mx-auto text-muted-foreground/60" />
                 <div className="mt-2 text-xs font-mono text-foreground">
-                  System log empty. No historical date adjustments found for this asset.
+                  System log empty. No historical events found for this asset.
                 </div>
               </div>
             )}
 
-            {fetchState === "error" && (
-              <div
-                className="px-4 py-5 flex items-start gap-3 border-l-2"
-                style={{ borderLeftColor: "hsl(348 83% 47%)", background: "hsl(348 83% 47% / 0.06)" }}
-              >
-                <RefreshCw className="w-4 h-4 mt-0.5" style={{ color: "hsl(348 83% 47%)" }} />
-                <div className="text-xs">
-                  <div className="font-bold uppercase tracking-wider font-mono" style={{ color: "hsl(348 83% 47%)" }}>
-                    Data Sync Interrupted
-                  </div>
-                  <div className="text-muted-foreground mt-1">
-                    Manual override required for ERD/LRD fields.
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {fetchState === "ready" && (
+            {!historyLoading && history && history.length > 0 && (
               <table className="w-full text-xs">
                 <thead>
                   <tr className="text-[10px] uppercase tracking-wider text-muted-foreground bg-secondary/40">
                     <th className="text-left font-medium px-4 py-2">Timestamp</th>
-                    <th className="text-left font-medium px-3 py-2">User</th>
-                    <th className="text-left font-medium px-3 py-2">Field</th>
-                    <th className="text-left font-medium px-3 py-2">From → To</th>
-                    <th className="text-left font-medium px-3 py-2">Reason</th>
+                    <th className="text-left font-medium px-3 py-2">Status</th>
+                    <th className="text-left font-medium px-3 py-2">Notes</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border font-mono">
                   {history.map((h, i) => (
                     <tr key={i} className="hover:bg-secondary/30">
-                      <td className="px-4 py-2 text-foreground/90 whitespace-nowrap">{h.ts}</td>
-                      <td className="px-3 py-2 text-foreground/90">{h.user}</td>
+                      <td className="px-4 py-2 text-foreground/90 whitespace-nowrap">
+                        {new Date(h.occurred_at).toISOString().replace("T", " ").slice(0, 16)}
+                      </td>
                       <td className="px-3 py-2">
-                        <span className="px-1.5 py-0.5 rounded border border-border bg-secondary/60 text-[10px]">{h.field}</span>
+                        <span className="px-1.5 py-0.5 rounded border border-border bg-secondary/60 text-[10px]">{h.status}</span>
                       </td>
-                      <td className="px-3 py-2 text-foreground/80">
-                        <span className="text-muted-foreground">{h.from}</span>
-                        <span className="mx-1 text-muted-foreground">→</span>
-                        <span className="text-foreground">{h.to}</span>
-                      </td>
-                      <td className="px-3 py-2 text-muted-foreground">{h.reason}</td>
+                      <td className="px-3 py-2 text-muted-foreground">{h.notes ?? ""}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -314,7 +326,7 @@ export const ErdLrdPanel = ({ container, open, onClose, onSaved }: Props) => {
                 Resolve validation error to enable save
               </span>
             ) : (
-              "Syncs to carrier EDI & drayage dispatch on save"
+              "Syncs to Nomos DB on save"
             )}
           </div>
           <button
@@ -325,12 +337,12 @@ export const ErdLrdPanel = ({ container, open, onClose, onSaved }: Props) => {
           </button>
           <button
             onClick={onSave}
-            disabled={!!validationError || saving}
+            disabled={!!validationError || save.isPending}
             className="text-sm font-semibold px-3 py-1.5 rounded-md text-accent-foreground inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ backgroundImage: "var(--gradient-action)" }}
           >
             <Save className="w-3.5 h-3.5" />
-            {saving ? "Syncing…" : "Save changes"}
+            {save.isPending ? "Syncing…" : "Save changes"}
           </button>
         </div>
       </SheetContent>
@@ -340,19 +352,10 @@ export const ErdLrdPanel = ({ container, open, onClose, onSaved }: Props) => {
 
 const HistorySkeleton = () => (
   <div>
-    <div className="grid grid-cols-[1.6fr_1fr_0.6fr_2fr_1.2fr] gap-3 px-4 py-2 bg-secondary/40 border-b border-border">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <div key={i} className="h-2.5 rounded bg-muted-foreground/15 animate-pulse" />
-      ))}
-    </div>
-    {Array.from({ length: 4 }).map((_, r) => (
-      <div key={r} className="grid grid-cols-[1.6fr_1fr_0.6fr_2fr_1.2fr] gap-3 px-4 py-3 border-b border-border last:border-b-0">
-        {Array.from({ length: 5 }).map((__, c) => (
-          <div
-            key={c}
-            className="h-3 rounded bg-muted-foreground/10 animate-pulse"
-            style={{ animationDelay: `${(r * 5 + c) * 60}ms`, width: c === 2 ? "60%" : c === 3 ? "92%" : "85%" }}
-          />
+    {Array.from({ length: 3 }).map((_, r) => (
+      <div key={r} className="grid grid-cols-3 gap-3 px-4 py-3 border-b border-border last:border-b-0">
+        {Array.from({ length: 3 }).map((__, c) => (
+          <div key={c} className="h-3 rounded bg-muted-foreground/10 animate-pulse" />
         ))}
       </div>
     ))}
