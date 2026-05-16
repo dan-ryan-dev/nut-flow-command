@@ -3,7 +3,7 @@ import { NavLink } from "react-router-dom";
 
 const nav = [
   { icon: LayoutDashboard, label: "Command Center", to: "/" },
-  { icon: Container, label: "Containers", to: "/containers" },
+  { icon: Container, label: "Shipping Center", to: "/containers" },
   { icon: Ship, label: "Vessels & ETAs", to: "#" },
   { icon: FileText, label: "Phyto Certificates", to: "#" },
   { icon: Building2, label: "Facilities", to: "#" },
