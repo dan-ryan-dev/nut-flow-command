@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Search, Sparkles, ShieldCheck, Loader2, Container as ContainerIcon, ArrowRight, CornerDownLeft } from "lucide-react";
+import { Search, Sparkles, ShieldCheck, Loader2, Container as ContainerIcon, ArrowRight, CornerDownLeft, AlertTriangle } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { useAllContainers } from "@/shared/hooks/useContainers";
 
 interface Props {
@@ -32,6 +34,19 @@ export const CommandBar = ({ open, onClose, onCreateBooking }: Props) => {
   const [processing, setProcessing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const containers = useAllContainers();
+  const alertsQ = useQuery({
+    queryKey: ["alerts", "command-bar"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("alerts")
+        .select("id, code, tag, status_text, container_ref, booking_ref, tone, acknowledged, occurred_at")
+        .order("occurred_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const alerts = alertsQ.data ?? [];
 
   useEffect(() => {
     if (open) {
@@ -58,12 +73,29 @@ export const CommandBar = ({ open, onClose, onCreateBooking }: Props) => {
         (c) =>
           c.id.toLowerCase().includes(term) ||
           c.booking.toLowerCase().includes(term) ||
+          (c.purchaseOrder ?? "").toLowerCase().includes(term) ||
           c.vessel.toLowerCase().includes(term) ||
           c.buyer.toLowerCase().includes(term) ||
-          c.destination.toLowerCase().includes(term),
+          c.destination.toLowerCase().includes(term) ||
+          c.facility.toLowerCase().includes(term),
       )
       .slice(0, 5);
   }, [q, containers]);
+
+  const alertMatches = useMemo(() => {
+    if (!q) return [];
+    const term = q.toLowerCase();
+    return alerts
+      .filter(
+        (a) =>
+          (a.status_text ?? "").toLowerCase().includes(term) ||
+          (a.container_ref ?? "").toLowerCase().includes(term) ||
+          (a.booking_ref ?? "").toLowerCase().includes(term) ||
+          (a.tag ?? "").toLowerCase().includes(term) ||
+          (a.code ?? "").toLowerCase().includes(term),
+      )
+      .slice(0, 4);
+  }, [q, alerts]);
 
   if (!open) return null;
 
@@ -144,10 +176,27 @@ export const CommandBar = ({ open, onClose, onCreateBooking }: Props) => {
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-mono text-foreground">{c.id}</div>
                     <div className="text-xs text-muted-foreground truncate">
-                      {c.vessel} · {c.destination} · {c.buyer}
+                      {c.vessel} · {c.destination} · {c.buyer} · {c.facility}
                     </div>
                   </div>
                   <CornerDownLeft className="w-3.5 h-3.5 text-muted-foreground" />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {q && !processing && alertMatches.length > 0 && (
+            <div className="p-2 border-t border-border">
+              <div className="px-2 py-1.5 text-[10px] uppercase tracking-widest text-muted-foreground">Alerts</div>
+              {alertMatches.map((a) => (
+                <div key={a.id} className="flex items-center gap-3 px-2.5 py-2 rounded-md hover:bg-secondary cursor-pointer">
+                  <AlertTriangle className={`w-4 h-4 ${a.tone === "critical" ? "text-destructive" : a.tone === "warning" ? "text-warning" : "text-primary"}`} />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm text-foreground truncate">{a.status_text}</div>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {[a.container_ref, a.booking_ref, a.tag].filter(Boolean).join(" · ")}
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -162,8 +211,12 @@ export const CommandBar = ({ open, onClose, onCreateBooking }: Props) => {
                   <div className="text-sm text-foreground leading-relaxed">
                     {isCreate ? (
                       <>Press Enter to start a new booking — or drop the carrier PDF to auto-fill.</>
-                    ) : matches.length ? (
-                      <>Found <span className="font-semibold">{matches.length}</span> containers matching "{q}".</>
+                    ) : matches.length || alertMatches.length ? (
+                      <>
+                        Found <span className="font-semibold">{matches.length}</span> container{matches.length === 1 ? "" : "s"}
+                        {alertMatches.length > 0 && <> and <span className="font-semibold">{alertMatches.length}</span> alert{alertMatches.length === 1 ? "" : "s"}</>}
+                        {" "}matching "{q}".
+                      </>
                     ) : (
                       <>
                         No matches in the live ledger.{" "}
