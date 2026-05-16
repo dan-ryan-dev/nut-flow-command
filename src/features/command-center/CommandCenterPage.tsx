@@ -8,11 +8,14 @@ import { DailyIntel } from "@/features/command-center/components/DailyIntel";
 import { ContainerTable } from "@/features/command-center/components/ContainerTable";
 import { KpiStrip } from "@/features/command-center/components/KpiStrip";
 import { useAllContainers } from "@/shared/hooks/useContainers";
+import { useAuth } from "@/shared/auth/AuthProvider";
 
 const CommandCenterPage = () => {
   const [cmdOpen, setCmdOpen] = useState(false);
   const [pdfOpen, setPdfOpen] = useState(false);
   const containers = useAllContainers();
+  const { role } = useAuth();
+  const canWrite = role === "coordinator" || role === "admin";
   const activeCount = containers.length;
   const facilityCount = new Set(containers.map((c) => c.facility)).size;
   const currentWeek = containers[0]?.shipmentWeek ?? "—";
