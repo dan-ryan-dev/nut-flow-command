@@ -13,6 +13,7 @@ import NotFound from "./pages/NotFound.tsx";
 import AuthPage from "./pages/AuthPage";
 import { AuthProvider } from "./shared/auth/AuthProvider";
 import { ProtectedRoute } from "./shared/auth/ProtectedRoute";
+import { OfflineBanner } from "./shared/components/OfflineBanner";
 
 const isAuthExpired = (err: unknown) => {
   const msg = err instanceof Error ? err.message.toLowerCase() : "";
@@ -25,6 +26,8 @@ const isAuthExpired = (err: unknown) => {
 };
 
 const handleAuthError = (err: unknown) => {
+  // Skip auth-signout when the error is just an offline/network failure.
+  if (typeof navigator !== "undefined" && !navigator.onLine) return;
   if (isAuthExpired(err)) {
     sessionStorage.setItem("nomos:session-expired", "1");
     void supabase.auth.signOut();
@@ -34,7 +37,21 @@ const handleAuthError = (err: unknown) => {
 const queryClient = new QueryClient({
   queryCache: new QueryCache({ onError: handleAuthError }),
   mutationCache: new MutationCache({ onError: handleAuthError }),
-  defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
+  defaultOptions: {
+    queries: {
+      retry: (failureCount, error) => {
+        const msg = error instanceof Error ? error.message.toLowerCase() : "";
+        const isNetwork =
+          (typeof navigator !== "undefined" && !navigator.onLine) ||
+          msg.includes("failed to fetch") ||
+          msg.includes("networkerror");
+        if (isNetwork) return failureCount < 3;
+        return failureCount < 1;
+      },
+      retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
+      staleTime: 30_000,
+    },
+  },
 });
 
 const App = () => (
@@ -42,6 +59,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <OfflineBanner />
       <BrowserRouter>
         <AuthProvider>
           <Routes>
