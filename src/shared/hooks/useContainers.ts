@@ -16,6 +16,7 @@ const emptyDocs = (): ContainerDocs => ({
 type DbContainer = {
   container_id: string;
   booking_id: string;
+  purchase_order: string | null;
   vessel: string;
   voyage: string;
   pol: string;
@@ -63,6 +64,7 @@ const fetchAll = async (): Promise<Container[]> => {
   return ((rows ?? []) as DbContainer[]).map((r) => ({
     id: r.container_id,
     booking: r.booking_id,
+    purchaseOrder: r.purchase_order ?? undefined,
     vessel: r.vessel,
     voyage: r.voyage,
     pol: r.pol,
