@@ -1,23 +1,47 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { useAuth } from "@/shared/auth/AuthProvider";
 import { Ship } from "lucide-react";
 import { toast } from "sonner";
 
+type Mode = "signin" | "signup" | "forgot" | "reset";
+
 const AuthPage = () => {
   const navigate = useNavigate();
+  const location = useLocation() as { state?: { from?: string } };
+  const [params] = useSearchParams();
   const { user } = useAuth();
-  const [tab, setTab] = useState<"signin" | "signup">("signin");
+  const [tab, setTab] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [busy, setBusy] = useState(false);
 
+  // Detect recovery callback (Supabase puts type=recovery in URL hash)
   useEffect(() => {
-    if (user) navigate("/", { replace: true });
-  }, [user, navigate]);
+    const hash = window.location.hash;
+    if (hash.includes("type=recovery")) {
+      setTab("reset");
+    }
+  }, []);
+
+  useEffect(() => {
+    if (params.get("reason") === "expired") {
+      toast.error("Your session expired — please sign in again.");
+    }
+  }, [params]);
+
+  const redirectAfterAuth = () => {
+    const from = location.state?.from && location.state.from !== "/auth" ? location.state.from : "/";
+    navigate(from, { replace: true });
+  };
+
+  useEffect(() => {
+    if (user && tab !== "reset") redirectAfterAuth();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,8 +50,8 @@ const AuthPage = () => {
       if (tab === "signin") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        navigate("/", { replace: true });
-      } else {
+        redirectAfterAuth();
+      } else if (tab === "signup") {
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -38,6 +62,20 @@ const AuthPage = () => {
         });
         if (error) throw error;
         toast.success("Check your email", { description: "Verify your address to finish signing up." });
+      } else if (tab === "forgot") {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/auth`,
+        });
+        if (error) throw error;
+        toast.success("Reset link sent", { description: "Check your inbox to set a new password." });
+        setTab("signin");
+      } else if (tab === "reset") {
+        const { error } = await supabase.auth.updateUser({ password });
+        if (error) throw error;
+        toast.success("Password updated");
+        // Clear hash and proceed
+        window.history.replaceState(null, "", "/auth");
+        redirectAfterAuth();
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Authentication failed";
@@ -52,6 +90,8 @@ const AuthPage = () => {
     if (result.error) toast.error("Google sign-in failed");
   };
 
+  const showTabs = tab === "signin" || tab === "signup";
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm bg-card border border-border rounded-lg p-6 shadow-elevated">
@@ -65,19 +105,30 @@ const AuthPage = () => {
           </div>
         </div>
 
-        <div className="flex border border-border rounded-md p-0.5 mb-5 bg-secondary">
-          {(["signin", "signup"] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`flex-1 text-xs font-medium py-1.5 rounded ${
-                tab === t ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
-              }`}
-            >
-              {t === "signin" ? "Sign in" : "Sign up"}
-            </button>
-          ))}
-        </div>
+        {showTabs && (
+          <div className="flex border border-border rounded-md p-0.5 mb-5 bg-secondary">
+            {(["signin", "signup"] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={`flex-1 text-xs font-medium py-1.5 rounded ${
+                  tab === t ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
+                }`}
+              >
+                {t === "signin" ? "Sign in" : "Sign up"}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {tab === "forgot" && (
+          <div className="mb-4 text-xs text-muted-foreground">
+            Enter your email and we'll send you a link to reset your password.
+          </div>
+        )}
+        {tab === "reset" && (
+          <div className="mb-4 text-xs text-muted-foreground">Set a new password for your account.</div>
+        )}
 
         <form onSubmit={submit} className="space-y-3">
           {tab === "signup" && (
@@ -91,48 +142,86 @@ const AuthPage = () => {
               />
             </div>
           )}
-          <div>
-            <label className="text-xs text-muted-foreground">Email</label>
-            <input
-              required
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-md text-sm"
-            />
-          </div>
-          <div>
-            <label className="text-xs text-muted-foreground">Password</label>
-            <input
-              required
-              type="password"
-              minLength={6}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-md text-sm"
-            />
-          </div>
+          {tab !== "reset" && (
+            <div>
+              <label className="text-xs text-muted-foreground">Email</label>
+              <input
+                required
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-md text-sm"
+              />
+            </div>
+          )}
+          {(tab === "signin" || tab === "signup" || tab === "reset") && (
+            <div>
+              <div className="flex items-center justify-between">
+                <label className="text-xs text-muted-foreground">
+                  {tab === "reset" ? "New password" : "Password"}
+                </label>
+                {tab === "signin" && (
+                  <button
+                    type="button"
+                    onClick={() => setTab("forgot")}
+                    className="text-[11px] text-muted-foreground hover:text-foreground"
+                  >
+                    Forgot?
+                  </button>
+                )}
+              </div>
+              <input
+                required
+                type="password"
+                minLength={6}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-md text-sm"
+              />
+            </div>
+          )}
           <button
             type="submit"
             disabled={busy}
             className="w-full py-2 rounded-md bg-primary text-primary-foreground text-sm font-semibold disabled:opacity-60"
           >
-            {busy ? "Working…" : tab === "signin" ? "Sign in" : "Create account"}
+            {busy
+              ? "Working…"
+              : tab === "signin"
+              ? "Sign in"
+              : tab === "signup"
+              ? "Create account"
+              : tab === "forgot"
+              ? "Send reset link"
+              : "Update password"}
           </button>
+          {(tab === "forgot" || tab === "reset") && (
+            <button
+              type="button"
+              onClick={() => setTab("signin")}
+              className="w-full text-xs text-muted-foreground hover:text-foreground"
+            >
+              Back to sign in
+            </button>
+          )}
         </form>
 
-        <div className="flex items-center gap-2 my-4">
-          <div className="h-px flex-1 bg-border" />
-          <span className="text-[10px] uppercase tracking-widest text-muted-foreground">or</span>
-          <div className="h-px flex-1 bg-border" />
-        </div>
+        {showTabs && (
+          <>
+            <div className="flex items-center gap-2 my-4">
+              <div className="h-px flex-1 bg-border" />
+              <span className="text-[10px] uppercase tracking-widest text-muted-foreground">or</span>
+              <div className="h-px flex-1 bg-border" />
+            </div>
 
-        <button
-          onClick={google}
-          className="w-full py-2 rounded-md border border-border text-sm font-medium hover:bg-secondary"
-        >
-          Continue with Google
-        </button>
+            <button
+              onClick={google}
+              className="w-full py-2 rounded-md border border-border text-sm font-medium hover:bg-secondary"
+            >
+              Continue with Google
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
