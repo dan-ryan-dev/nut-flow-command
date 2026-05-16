@@ -4,6 +4,12 @@ import { Plus, Pencil, Power } from "lucide-react";
 import { toast } from "sonner";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  QueryErrorCard,
+  EmptyState,
+  SkeletonRows,
+  InlineErrorBanner,
+} from "@/shared/components/QueryStates";
 
 // Settings reads/writes 11 different reference tables; the table name is
 // chosen at runtime so we use a loose client for these queries.
@@ -61,8 +67,9 @@ const SettingsPage = () => {
   const [tab, setTab] = useState<Tab>("Shipping Lines");
   const cfg = tabConfig[tab];
   const qc = useQueryClient();
+  const [formError, setFormError] = useState<string | null>(null);
 
-  const { data, isLoading } = useQuery({
+  const settingsQ = useQuery({
     queryKey: ["settings", cfg.table],
     queryFn: async () => {
       const { data, error } = await db
@@ -73,6 +80,7 @@ const SettingsPage = () => {
       return (data ?? []) as Row[];
     },
   });
+  const { data, isLoading, isError, error: loadError, refetch } = settingsQ;
 
   const addMut = useMutation({
     mutationFn: async () => {
@@ -87,10 +95,14 @@ const SettingsPage = () => {
       if (error) throw error;
     },
     onSuccess: () => {
+      setFormError(null);
       toast.success(`${singular(tab)} added`);
       qc.invalidateQueries({ queryKey: ["settings", cfg.table] });
     },
-    onError: (e: Error) => toast.error("Add failed", { description: e.message }),
+    onError: (e: Error) => {
+      setFormError(e.message);
+      toast.error("Add failed", { description: e.message });
+    },
   });
 
   const toggleMut = useMutation({
@@ -102,10 +114,14 @@ const SettingsPage = () => {
       if (error) throw error;
     },
     onSuccess: (_d, row) => {
+      setFormError(null);
       toast.success(`Toggled ${row.name}`);
       qc.invalidateQueries({ queryKey: ["settings", cfg.table] });
     },
-    onError: (e: Error) => toast.error("Toggle failed", { description: e.message }),
+    onError: (e: Error) => {
+      setFormError(e.message);
+      toast.error("Toggle failed", { description: e.message });
+    },
   });
 
   const renameMut = useMutation({
@@ -117,9 +133,13 @@ const SettingsPage = () => {
       if (error) throw error;
     },
     onSuccess: () => {
+      setFormError(null);
       qc.invalidateQueries({ queryKey: ["settings", cfg.table] });
     },
-    onError: (e: Error) => toast.error("Edit failed", { description: e.message }),
+    onError: (e: Error) => {
+      setFormError(e.message);
+      toast.error("Edit failed", { description: e.message });
+    },
   });
 
   const rows = data ?? [];
@@ -169,14 +189,31 @@ const SettingsPage = () => {
               <button
                 onClick={() => addMut.mutate()}
                 disabled={addMut.isPending}
-                className="flex items-center gap-2 px-3.5 py-2 rounded-md text-sm font-semibold text-white bg-[hsl(220_15%_10%)] hover:bg-[hsl(220_15%_18%)] transition-colors disabled:opacity-50"
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-md text-sm font-semibold text-white transition-colors disabled:opacity-50 ${
+                  !isLoading && !isError && rows.length === 0
+                    ? "bg-accent text-accent-foreground ring-2 ring-accent/40 animate-pulse"
+                    : "bg-[hsl(220_15%_10%)] hover:bg-[hsl(220_15%_18%)]"
+                }`}
               >
                 <Plus className="w-3.5 h-3.5" />
                 Add {singular(tab)}
               </button>
             </div>
 
+            <InlineErrorBanner message={formError} />
+
+            {isError ? (
+              <QueryErrorCard error={loadError} onRetry={() => refetch()} title={`Couldn't load ${tab.toLowerCase()}`} />
+            ) : (
             <div className="rounded-lg border border-border bg-card overflow-hidden">
+              {isLoading ? (
+                <div className="p-4"><SkeletonRows rows={5} rowClassName="h-10" /></div>
+              ) : rows.length === 0 ? (
+                <EmptyState
+                  title={`No ${tab.toLowerCase()} yet`}
+                  description="Use the highlighted Add button above to create the first one."
+                />
+              ) : (
               <table className="w-full text-sm">
                 <thead className="bg-secondary/60 text-[10px] uppercase tracking-widest text-muted-foreground">
                   <tr>
@@ -187,11 +224,6 @@ const SettingsPage = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {!isLoading && rows.length === 0 && (
-                    <tr><td colSpan={4} className="px-5 py-10 text-center text-sm text-muted-foreground">
-                      No {tab.toLowerCase()} yet. Click Add to create the first one.
-                    </td></tr>
-                  )}
                   {rows.map((r) => (
                     <tr key={r.id} className="hover:bg-secondary/40">
                       <td className="px-5 py-3 font-medium text-foreground">{r.name}</td>
@@ -233,7 +265,9 @@ const SettingsPage = () => {
                   ))}
                 </tbody>
               </table>
+              )}
             </div>
+            )}
           </div>
         </div>
       </main>
