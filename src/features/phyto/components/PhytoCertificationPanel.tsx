@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { PhytoPdfPreview } from "./PhytoPdfPreview";
 import { phytoStore } from "@/features/phyto/state/phytoStore";
+import { useAuth } from "@/shared/auth/AuthProvider";
 
 interface Props {
   container: Container | null;
@@ -58,6 +59,8 @@ const routeFetchState = (id: string): FetchState => {
 };
 
 export const PhytoCertificationPanel = ({ container, open, onClose }: Props) => {
+  const { role } = useAuth();
+  const canWrite = role === "coordinator" || role === "admin";
   if (!container) return null;
   const fields = buildFields(container);
   const missing = fields.filter((f) => f.status === "missing");
