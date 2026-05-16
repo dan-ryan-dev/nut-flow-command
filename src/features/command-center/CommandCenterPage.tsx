@@ -66,14 +66,16 @@ const CommandCenterPage = () => {
             <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-accent" />
           </button>
 
-          <button
-            onClick={() => setPdfOpen(true)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-semibold text-accent-foreground"
-            style={{ backgroundImage: "var(--gradient-action)", boxShadow: "var(--shadow-card)" }}
-          >
-            <Plus className="w-3.5 h-3.5" />
-            New booking
-          </button>
+          {canWrite && (
+            <button
+              onClick={() => setPdfOpen(true)}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-semibold text-accent-foreground"
+              style={{ backgroundImage: "var(--gradient-action)", boxShadow: "var(--shadow-card)" }}
+            >
+              <Plus className="w-3.5 h-3.5" />
+              New booking
+            </button>
+          )}
         </header>
 
         <div className="flex-1 overflow-y-auto">
