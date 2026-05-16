@@ -122,3 +122,239 @@ Every per-tenant table gets the same two-policy pattern: read scoped to org memb
 | `daily_briefings`, `kpi_snapshots`, `intake_metrics` | Per-org | Read: org members. Insert: service role (edge function). |
 
 Current prototype RLS (public read, authenticated write on all five existing tables) is fine for the demo but **must be tightened to `org_id`-scoped policies** before any second tenant or real customer data lands.
+
+---
+
+## Section 5: Prompts
+
+### Prompt 1 — Schema Expansion
+
+```
+Extend the Nomos backend so the UI runs entirely off Supabase instead of hardcoded constants.
+
+1. Create these new tables with RLS enabled (per-org scoping where noted):
+   - organizations (id, name)
+   - profiles (user_id → auth.users, org_id, display_name)
+   - user_roles (user_id, org_id, role app_role enum: admin/coordinator/viewer) — separate table, NEVER on profiles
+   - vessels, drayage_carriers, labs, terminals, products, pack_types, payment_terms, buyers, alert_rules — all (id, org_id, name, code, active)
+   - ports (id, name, unlocode, active) — global, not per-org
+   - daily_briefings (id, org_id, briefing_date, generated_at, cards jsonb)
+   - kpi_snapshots (id, org_id, taken_at, shipment_week, containers_count, action_count, logged_realtime, demurrage_usd)
+   - intake_metrics (id, org_id, booking_id, pdf_filename, duration_ms, fields_extracted, accuracy_pct)
+   Add columns to containers: erd timestamptz, lrd timestamptz, carrier_last_synced_at timestamptz.
+   Add org_id uuid to containers, documents, logistics_events, alerts, carriers.
+
+2. Add a SECURITY DEFINER function has_role(_user_id uuid, _org_id uuid, _role app_role) to use inside RLS policies (no recursion).
+
+3. Replace hardcoded values in the UI with real queries via @tanstack/react-query and src/integrations/supabase/client:
+   - KpiStrip.tsx: derive all 4 tiles from containers + kpi_snapshots (containers this week, action required, logged real-time, demurrage 14-day rollup).
+   - CommandCenterPage.tsx header: "42 active · 4 facilities · Week 19" → live counts.
+   - DailyIntel.tsx: read latest row from daily_briefings.
+   - CommandBar.tsx: "scanning 42 containers" → live count; remove ALL_SUGGESTIONS canned answers (leave the UI, swap data source in a later prompt).
+   - AlertsPage.tsx: replace `seed` and `historySeed` with SELECTs against alerts (acknowledged = false / true). Acknowledge button does UPDATE.
+   - SettingsPage.tsx: each of the 11 tabs reads its own reference table; Add/Edit/Toggle become real INSERT/UPDATE.
+   - useContainers.ts selectors (useAllContainers, useContainerByBooking, useActionRequiredContainers, useContainersByWeek): replace bodies with Supabase queries — DO NOT change signatures, every component import stays the same.
+   - phytoStore.ts: replace the in-memory Set with documents table writes (booking_id + doc_type='phyto', status='draft'/'attached').
+   - ErdLrdPanel.tsx: read/write containers.erd/lrd; show real LATENCY badge based on carrier_last_synced_at.
+   - PdfBookingFlow.tsx: on Confirm, INSERT into containers + documents and log a row in intake_metrics.
+
+Seed the new reference tables from the hardcoded arrays in SettingsPage.tsx. Keep the existing containers/documents seed.
+```
+
+### Prompt 2 — Auth UI + Row-Level Security
+
+```
+Add authentication and lock the app down per Section 4 of Integration Plan.md.
+
+1. Create an /auth route with tabs for Sign in and Sign up. Use email/password + Google. On signup collect display_name and create a profiles row + a user_roles row (default role: coordinator, org_id = first organization for now).
+   - Set emailRedirectTo: window.location.origin on signUp().
+   - Use onAuthStateChange BEFORE getSession() in the auth provider.
+   - Do NOT enable auto-confirm; users verify via email.
+
+2. Add a ProtectedRoute wrapper around /, /containers, /alerts, /settings. Unauthenticated users redirect to /auth.
+
+3. Update Sidebar.tsx to show the logged-in user's display_name (from profiles) and a Logout button that calls supabase.auth.signOut() and routes to /auth. Hide the Settings nav entry for non-admin roles.
+
+4. Tighten RLS — replace the current "public read / authenticated write" policies on containers, documents, logistics_events, alerts, carriers with org-scoped policies using has_role():
+   - SELECT: row's org_id IS IN (user's orgs from user_roles)
+   - INSERT/UPDATE/DELETE on containers/documents/logistics_events: has_role(uid, org_id, 'coordinator') OR has_role(uid, org_id, 'admin')
+   - UPDATE on alerts (acknowledge): same as above
+   - All reference tables (vessels, labs, buyers, etc.): SELECT for any org member, write requires 'admin'
+   - profiles: SELECT same org, UPDATE own row only
+   - user_roles: SELECT own + admin reads all org roles; write requires admin
+
+5. Hide UI affordances per role:
+   - viewer: hide Acknowledge button, Phyto Submit, ERD/LRD Save, "New booking" button
+   - coordinator: hide Settings nav entry
+   - admin: full UI
+
+6. Verify two seeded test users (one coordinator in Org A, one in Org B) see only their own org's containers, alerts, and documents.
+```
+
+### Prompt 3 — Edge Cases
+
+```
+Make the entire Nomos app resilient. Cover these failure modes everywhere they apply (Command Center, Containers Ledger, Alerts, Settings, Phyto panel, ERD/LRD panel, PDF intake, Command Bar):
+
+1. Database connection failure
+   - Wrap every Supabase query with React Query error handling.
+   - On error: show a centered card with the error message + a "Retry" button that re-runs the query. Never show a blank screen.
+
+2. Empty data states
+   - Containers Ledger with zero containers: "No shipments yet — drop a carrier PDF to log your first booking" + button that opens PdfBookingFlow.
+   - Alerts with zero active: "All clear — no active alerts" with a calm illustration tone.
+   - Settings tab with zero rows: "No {entity} yet" + the existing Add button highlighted.
+   - Command Bar with no matches: keep the existing fallback copy but link to "Start a new booking".
+
+3. Form submission failure
+   - PhytoCertificationPanel Submit, ErdLrdPanel Save, SettingsPage Add/Edit, PdfBookingFlow Confirm, AlertsPage Acknowledge: on error show an inline red banner above the form with the error message; DO NOT clear the form fields.
+
+4. Loading states
+   - Replace every spinner-only state with skeleton screens matching the final layout:
+     - KpiStrip: 4 skeleton tiles
+     - DailyIntel: 4 skeleton briefing rows
+     - ContainerTable / ContainerLedger: 6 skeleton rows
+     - AlertsPage: 4 skeleton alert rows
+     - SettingsPage table: 5 skeleton rows
+     - Phyto + ERD/LRD panels: skeleton field grid
+
+5. Session expiry
+   - In the auth provider, on SIGNED_OUT or expired-token errors from any query, redirect to /auth?reason=expired and show a toast: "Your session expired — please sign in again."
+
+Also handle:
+- ERD/LRD where LRD < ERD: keep existing client validation, add server-side check.
+- Phyto attach when document row already exists: UPSERT, don't error.
+- PDF intake with duplicate booking_id: surface "Booking BK-XXXXX already exists" inline.
+```
+
+---
+
+## Section 6: Edge Case Checklist
+
+- [ ] **DB connection failure** — Every query shows an error card with a Retry button instead of a blank screen.
+- [ ] **Empty containers ledger** — First-run user sees a "Drop a PDF" CTA, not an empty table.
+- [ ] **Empty alerts queue** — "All clear" message instead of a blank list.
+- [ ] **Empty settings tab** — Per-tab empty state highlighting the Add button.
+- [ ] **Form submission failure** — Inline error above the form; user input preserved.
+- [ ] **Loading skeletons** — Every fetching screen (KPIs, briefings, ledger, alerts, settings, panels) shows layout-matching skeletons.
+- [ ] **Session expiry** — Auto-redirect to `/auth?reason=expired` with a toast.
+- [ ] **LRD before ERD** — Both client and server reject; existing emerald-flash success path stays intact.
+- [ ] **Phyto re-attach** — UPSERT on `documents` so re-attaching a draft doesn't error.
+- [ ] **Duplicate booking_id on PDF intake** — Inline "already exists" error in `PdfBookingFlow` instead of a 409 toast.
+- [ ] **Cutoff already passed** — `ContainerTable` "Action Required" chip switches to "Missed cutoff" tone; no edit on `ErdLrdPanel`.
+- [ ] **Stale carrier feed** — `LATENCY` badge appears in `ErdLrdPanel` when `carrier_last_synced_at` > 30 min old.
+- [ ] **Acknowledge race** — Two coordinators acking the same alert: second click shows "Already acknowledged by X" and refreshes.
+- [ ] **CSV export with zero rows** — Disable the Export button; tooltip "Nothing to export".
+- [ ] **PDF intake mid-upload close** — Modal close during `parsing` cancels the simulated job cleanly with no orphaned `intake_metrics` row.
+- [ ] **Cross-screen Phyto sync after error** — If `documents` write fails, the chip rolls back and shows the prior state.
+- [ ] **Role downgrade mid-session** — Hidden affordances re-evaluate on next route change; server RLS denies any stale write.
+- [ ] **Wrong-org container lookup via URL** — Direct navigation to a booking outside the user's org returns a 404-style "Not found in your workspace".
+- [ ] **Long lot list overflow** — `lots[]` with 10+ entries truncates with "+N more" in the table; full list visible on hover.
+- [ ] **Realtime disconnect** — "Synced 12s ago" header indicator turns amber and shows last-good time when websocket drops.
+
+---
+
+## Section 7: Stress Test Plan
+
+### Test 1 — Carrier feed offline mid-edit (connection failure)
+
+**Setup:** Sign in as a coordinator. Open `/containers`. Click an "Action Required" row to open `ErdLrdPanel`. Edit the ERD date. Before clicking Save, open browser DevTools → Network → set "Offline".
+
+**Steps:**
+1. Click **Save** in the panel.
+2. Observe.
+3. Restore the network.
+4. Click **Retry**.
+
+**Expected:**
+- Inline red error banner appears above the form ("Couldn't reach the database — check your connection").
+- Date fields keep the values the user typed.
+- `LATENCY` badge appears on the panel within 5 seconds.
+- After network restore, Retry succeeds and the row flashes emerald.
+- No duplicate `logistics_events` row is written.
+
+### Test 2 — Brand-new org, zero shipments (empty state)
+
+**Setup:** Sign up a brand-new user with a fresh email. Default role = coordinator. New `organizations` row, no seeded containers/documents/alerts.
+
+**Steps:**
+1. Land on `/` (Command Center).
+2. Visit `/containers`, `/alerts`, `/settings` in order.
+3. Click "New booking" and cancel the modal.
+
+**Expected:**
+- KPI strip shows zeros (not "42") with "No baseline yet" subtext, not "vs 38 last wk".
+- Daily Intel shows "No briefing for today yet — comes back at 06:00 PT" instead of stale cards.
+- Containers Ledger shows the empty state card with a "Drop your first PDF" CTA wired to `PdfBookingFlow`.
+- Alerts shows "All clear — no active alerts".
+- Settings → Shipping Lines (and every other tab) shows "No {entity} yet" + highlighted Add button.
+- `⌘K` Command Bar still opens; suggestion list shows "Start by logging your first booking".
+
+### Test 3 — Double-click submit storm (rapid repeated actions)
+
+**Setup:** Sign in as a coordinator. Open `/` and open `PhytoCertificationPanel` for a booking with `phyto = missing`.
+
+**Steps:**
+1. Click **Submit** 8 times in under one second.
+2. Switch to `/alerts` and spam **Acknowledge** on the top alert 10 times.
+3. Open `PdfBookingFlow`, drop a PDF, and during `parsing` close + reopen the modal 5 times in 3 seconds.
+
+**Expected:**
+- Phyto: exactly one `documents` UPSERT executes; button shows a spinner + disabled state on click 1; subsequent clicks are no-ops. Cross-screen chip + Docs hover-card update exactly once.
+- Alerts: exactly one `alerts.acknowledged = true` UPDATE; alert disappears from active and appears once in history. Subsequent clicks show a toast "Already acknowledged".
+- PDF intake: each close cancels the running `setInterval` cleanly; no orphan `intake_metrics` rows; final confirm writes exactly one `containers` row and four `documents` rows.
+- No duplicate `logistics_events` entries anywhere.
+
+---
+
+## Section 8: Handoff Note
+
+### What's Real vs. What's Mocked
+
+| Feature | Status | Notes |
+|---|---|---|
+| Routing, Sidebar, layout shell | Real | `src/App.tsx`, 4 routes + 404 |
+| Design tokens (HSL) | Real | `src/index.css`, `tailwind.config.ts` |
+| Containers ledger & schema | Real (data), Mocked (UI bind) | Tables seeded with 13 containers; UI still reads `src/shared/data/containers.ts` |
+| Documents schema | Real (data), Mocked (UI bind) | 52 rows seeded; UI still uses `phytoStore` in-memory |
+| Phyto cross-screen sync | Mocked | `phytoStore.ts` uses `useSyncExternalStore` + `Set` |
+| Phyto USDA submission | Mocked | Submit only flips local state + toasts |
+| ERD/LRD edits | Mocked | Validates client-side; no persistence |
+| PDF booking intake | Mocked | 14 fields hardcoded; PDF bytes discarded |
+| Command Bar AI answers | Mocked | 5 canned answers + random fallback |
+| Daily Intel briefings | Mocked | 4 hardcoded cards |
+| KPI tiles | Mocked | 4 hardcoded values |
+| Alerts (active + history) | Mocked | Local `useState` seed; `alerts` table exists but unused by UI |
+| Settings reference tabs (11) | Mocked | Local arrays; only `carriers` has a real table |
+| CSV export | Real | Client-side `Blob` from `useContainersByWeek()` |
+| Authentication | Not built | `auth.users` empty; no `/auth` route |
+| RLS | Permissive prototype | Public read + authenticated write on all 5 tables; not org-scoped |
+| Edge functions | None | No `supabase/functions/` directory |
+| Realtime | Not enabled | No `supabase_realtime` publication additions |
+
+### Database Schema Summary
+
+- **containers** — Canonical shipment ledger. PK on `container_id`, linked to docs by `booking_id`. 13 demo rows seeded.
+- **documents** — Phyto / BOL / Commercial Invoice / Packing List, keyed by `booking_id + doc_type`. 52 demo rows seeded.
+- **logistics_events** — Append-only status timeline per `container_id`. Empty.
+- **alerts** — Active + history queue. Empty (UI uses local seed).
+- **carriers** — Shipping-line reference data (SCAC codes). Empty.
+
+### Auth & RLS Model
+
+- **No auth implemented yet.** All five tables currently allow **public read** and **authenticated write** — fine for the demo, unsafe for any second tenant.
+- **Planned roles** (from Section 4): `admin`, `coordinator`, `viewer`, stored in a separate `user_roles` table, checked via a `has_role(uid, org_id, role)` `SECURITY DEFINER` function.
+- **Planned isolation:** every per-tenant row gains `org_id`; RLS scopes SELECT to org membership and writes to coordinator/admin.
+
+### Edge Cases Handled
+
+_To be filled in after the lab — see Section 6 checklist._
+
+### Known Gaps
+
+_To be filled in after stress testing — see Section 7 plan._
+
+### Live URL
+
+_To be filled in after deployment._
+
