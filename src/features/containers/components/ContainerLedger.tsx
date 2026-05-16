@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { ChevronDown, MoreHorizontal } from "lucide-react";
+import { ChevronDown, MessageSquare } from "lucide-react";
 import { Container, LogisticsStatus } from "@/shared/data/containers";
 import { StatusBadge } from "./StatusBadge";
 import { DocsHoverCard } from "./DocsHoverCard";
 import { phytoStore } from "@/features/phyto/state/phytoStore";
+import { ShipmentCommentsDialog } from "./ShipmentCommentsDialog";
 
 const STATUS_ORDER: Record<LogisticsStatus, number> = {
   "pending-load": 0,
@@ -77,6 +78,7 @@ const WeekGroup = ({ week, items }: { week: string; items: Container[] }) => {
               <tr className="text-[10px] uppercase tracking-wider text-muted-foreground bg-secondary/40">
                 <th className="text-left font-medium px-5 py-2">Container #</th>
                 <th className="text-left font-medium px-3 py-2">Booking #</th>
+                <th className="text-left font-medium px-3 py-2">PO #</th>
                 <th className="text-left font-medium px-3 py-2">Lot ID</th>
                 <th className="text-left font-medium px-3 py-2">Buyer</th>
                 <th className="text-left font-medium px-3 py-2">Status</th>
@@ -100,6 +102,7 @@ const Row = ({ c }: { c: Container }) => {
   const isClosed = c.logisticsStatus === "closed";
   const visibleLots = c.lots.slice(0, 2);
   const overflow = c.lots.length - visibleLots.length;
+  const [open, setOpen] = useState(false);
   return (
     <tr className={`hover:bg-secondary/30 ${isClosed ? "opacity-55" : ""}`}>
       <td className="px-5 py-3">
@@ -109,6 +112,9 @@ const Row = ({ c }: { c: Container }) => {
         <div className="text-[11px] text-muted-foreground">{c.facility} · {c.product}</div>
       </td>
       <td className="px-3 py-3 font-mono text-[12px] text-foreground/90">{c.booking}</td>
+      <td className="px-3 py-3 font-mono text-[12px] text-foreground/90">
+        {c.purchaseOrder ?? <span className="text-muted-foreground/60">—</span>}
+      </td>
       <td className="px-3 py-3">
         <div className="flex items-center gap-1 flex-wrap">
           {visibleLots.map((l) => (
@@ -144,8 +150,14 @@ const Row = ({ c }: { c: Container }) => {
       <td className="px-3 py-3">
         <DocsHoverCard container={c} />
       </td>
-      <td className="px-3 py-3 text-muted-foreground">
-        <MoreHorizontal className="w-4 h-4" />
+      <td className="px-3 py-3">
+        <button
+          onClick={() => setOpen(true)}
+          className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-border bg-card text-[11px] text-foreground/80 hover:bg-secondary"
+        >
+          <MessageSquare className="w-3 h-3" /> Notes
+        </button>
+        <ShipmentCommentsDialog container={c} open={open} onOpenChange={setOpen} />
       </td>
     </tr>
   );

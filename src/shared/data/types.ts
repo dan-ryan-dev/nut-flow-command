@@ -29,6 +29,7 @@ export interface ContainerDocs {
 export interface Container {
   id: string;
   booking: string;
+  purchaseOrder?: string;
   vessel: string;
   voyage: string;
   pol: string;
