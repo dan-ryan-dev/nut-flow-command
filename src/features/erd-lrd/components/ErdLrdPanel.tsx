@@ -335,15 +335,17 @@ export const ErdLrdPanel = ({ container, open, onClose, onSaved }: Props) => {
           >
             Close
           </button>
-          <button
-            onClick={onSave}
-            disabled={!!validationError || save.isPending}
-            className="text-sm font-semibold px-3 py-1.5 rounded-md text-accent-foreground inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ backgroundImage: "var(--gradient-action)" }}
-          >
-            <Save className="w-3.5 h-3.5" />
-            {save.isPending ? "Syncing…" : "Save changes"}
-          </button>
+          {canWrite && (
+            <button
+              onClick={onSave}
+              disabled={!!validationError || save.isPending}
+              className="text-sm font-semibold px-3 py-1.5 rounded-md text-accent-foreground inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ backgroundImage: "var(--gradient-action)" }}
+            >
+              <Save className="w-3.5 h-3.5" />
+              {save.isPending ? "Syncing…" : "Save changes"}
+            </button>
+          )}
         </div>
       </SheetContent>
     </Sheet>
