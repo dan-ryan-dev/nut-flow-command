@@ -3,6 +3,8 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/comp
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { QueryErrorCard, SkeletonRows } from "@/shared/components/QueryStates";
+import { useAllContainersQuery } from "@/shared/hooks/useContainers";
+import type { Container } from "@/shared/data/types";
 
 type Tone = "action" | "warn" | "info" | "good";
 type Card = { icon: string; tone: Tone; title: string; body: string; cta: string };
@@ -28,29 +30,120 @@ const iconStyles: Record<Tone, string> = {
   good: "text-success",
 };
 
+const buildCards = (containers: Container[], alerts: AlertRow[]): Card[] => {
+  const cards: Card[] = [];
+  const now = Date.now();
+
+  // 1. Cutoffs in next 48h
+  const soonCutoff = containers.filter((c) => {
+    const t = new Date(c.cutoff).getTime();
+    return !isNaN(t) && t - now > 0 && t - now < 48 * 3600 * 1000;
+  });
+  if (soonCutoff.length) {
+    cards.push({
+      icon: "Ship",
+      tone: "warn",
+      title: `${soonCutoff.length} container${soonCutoff.length === 1 ? "" : "s"} with port cutoff in next 48h`,
+      body: soonCutoff
+        .slice(0, 3)
+        .map((c) => `${c.id} · ${c.vessel}`)
+        .join("  ·  "),
+      cta: "Review",
+    });
+  }
+
+  // 2. Missing phyto at POD / in transit
+  const missingPhyto = containers.filter((c) => !c.phytoComplete && c.status !== "draft" && c.status !== "delivered");
+  if (missingPhyto.length) {
+    cards.push({
+      icon: "AlertTriangle",
+      tone: "action",
+      title: `${missingPhyto.length} shipment${missingPhyto.length === 1 ? "" : "s"} missing phytosanitary certificates`,
+      body: missingPhyto
+        .slice(0, 3)
+        .map((c) => `${c.id} → ${c.destination}`)
+        .join("  ·  "),
+      cta: "Attach phyto",
+    });
+  }
+
+  // 3. Delayed ETAs
+  const delayed = containers.filter((c) => c.etaDelayed);
+  if (delayed.length) {
+    cards.push({
+      icon: "TrendingUp",
+      tone: "warn",
+      title: `${delayed.length} container${delayed.length === 1 ? "" : "s"} with delayed ETA`,
+      body: delayed
+        .slice(0, 3)
+        .map((c) => `${c.id} · ${c.buyer}`)
+        .join("  ·  "),
+      cta: "Investigate",
+    });
+  }
+
+  // 4. Open alerts
+  const openAlerts = alerts.filter((a) => !a.acknowledged);
+  if (openAlerts.length) {
+    cards.push({
+      icon: "AlertTriangle",
+      tone: openAlerts.some((a) => a.tone === "danger") ? "action" : "warn",
+      title: `${openAlerts.length} unacknowledged alert${openAlerts.length === 1 ? "" : "s"}`,
+      body: openAlerts.slice(0, 3).map((a) => a.status_text).join("  ·  "),
+      cta: "View alerts",
+    });
+  }
+
+  // 5. All-clear baseline
+  if (cards.length === 0) {
+    cards.push({
+      icon: "Database",
+      tone: "good",
+      title: `All ${containers.length} containers on track`,
+      body: "No cutoffs in the next 48 hours, no missing phytos, no delayed ETAs.",
+      cta: "Open ledger",
+    });
+  }
+
+  return cards;
+};
+
+type AlertRow = {
+  id: string;
+  status_text: string;
+  tone: "danger" | "warning" | "info";
+  acknowledged: boolean;
+  container_ref: string | null;
+  booking_ref: string | null;
+};
+
 export const DailyIntel = () => {
-  const briefingQ = useQuery({
-    queryKey: ["daily_briefings", "latest"],
+  const containersQ = useAllContainersQuery();
+  const alertsQ = useQuery({
+    queryKey: ["alerts", "daily-intel"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("daily_briefings")
-        .select("*")
-        .order("briefing_date", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .from("alerts")
+        .select("id, status_text, tone, acknowledged, container_ref, booking_ref")
+        .order("occurred_at", { ascending: false });
       if (error) throw error;
-      return data;
+      return (data ?? []) as AlertRow[];
     },
   });
-  const data = briefingQ.data;
-  const cards: Card[] = Array.isArray(data?.cards) ? (data!.cards as unknown as Card[]) : [];
-  const dateLabel = data?.briefing_date
-    ? new Date(data.briefing_date as string).toLocaleDateString(undefined, {
-        weekday: "long",
-        month: "long",
-        day: "numeric",
-      })
-    : "Today";
+
+  const isLoading = containersQ.isLoading || alertsQ.isLoading;
+  const error = containersQ.error ?? alertsQ.error;
+  const isError = containersQ.isError || alertsQ.isError;
+
+  const cards: Card[] = !isLoading && !isError
+    ? buildCards(containersQ.data ?? [], alertsQ.data ?? [])
+    : [];
+
+  const dateLabel = new Date().toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
 
   return (
     <section className="bg-card rounded-lg border border-border overflow-hidden">
@@ -77,10 +170,10 @@ export const DailyIntel = () => {
         </TooltipProvider>
       </div>
       <div className="divide-y divide-border">
-        {briefingQ.isLoading ? (
+        {isLoading ? (
           <div className="p-4"><SkeletonRows rows={4} rowClassName="h-14" /></div>
-        ) : briefingQ.isError ? (
-          <QueryErrorCard error={briefingQ.error} onRetry={() => briefingQ.refetch()} title="Couldn't load briefing" />
+        ) : isError ? (
+          <QueryErrorCard error={error} onRetry={() => { containersQ.refetch(); alertsQ.refetch(); }} title="Couldn't load briefing" />
         ) : cards.length === 0 ? (
           <div className="px-5 py-8 text-center text-sm text-muted-foreground">
             No briefing yet for today.
