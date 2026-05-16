@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Search, Sparkles, Plus, Anchor, Bell } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Search, Sparkles, Plus, Anchor, Bell, LogIn } from "lucide-react";
 import { toast } from "sonner";
 import { Sidebar } from "@/shared/components/Sidebar";
 import { CommandBar } from "@/features/command-center/components/CommandBar";
@@ -14,8 +15,9 @@ const CommandCenterPage = () => {
   const [cmdOpen, setCmdOpen] = useState(false);
   const [pdfOpen, setPdfOpen] = useState(false);
   const containers = useAllContainers();
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const canWrite = role === "coordinator" || role === "admin";
+  const isAuthed = !!user;
   const activeCount = containers.length;
   const facilityCount = new Set(containers.map((c) => c.facility)).size;
   const currentWeek = containers[0]?.shipmentWeek ?? "—";
@@ -44,6 +46,20 @@ const CommandCenterPage = () => {
       <Sidebar />
 
       <main className="flex-1 flex flex-col min-w-0">
+        {!isAuthed && (
+          <div className="border-b border-border bg-secondary/60 px-6 py-2 flex items-center gap-3 text-xs">
+            <LogIn className="w-3.5 h-3.5 text-muted-foreground" />
+            <span className="text-muted-foreground">
+              You're viewing Nomos in read-only preview mode. Sign in to load your shipments and save changes.
+            </span>
+            <Link
+              to="/auth"
+              className="ml-auto px-3 py-1 rounded-md bg-primary text-primary-foreground font-semibold"
+            >
+              Sign in
+            </Link>
+          </div>
+        )}
         {/* Top bar */}
         <header className="h-14 border-b border-border bg-card px-6 flex items-center gap-4">
           <div>
