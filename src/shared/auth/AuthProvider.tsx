@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export type AppRole = "admin" | "coordinator" | "viewer";
 
@@ -35,6 +36,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (!s?.user) {
         setProfile(null);
         setRoles([]);
+        if (_event === "SIGNED_OUT" && window.location.pathname !== "/auth") {
+          // Distinguish explicit signOut from expired-token paths via URL hint
+          const expired = sessionStorage.getItem("nomos:session-expired") === "1";
+          if (expired) {
+            sessionStorage.removeItem("nomos:session-expired");
+            toast.error("Your session expired — please sign in again.");
+            window.location.assign("/auth?reason=expired");
+          }
+        }
       } else {
         // defer DB calls to avoid recursive locking
         setTimeout(() => loadUserData(s.user!.id), 0);
