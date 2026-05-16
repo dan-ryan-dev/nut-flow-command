@@ -64,7 +64,7 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/auth" element={<AuthPage />} />
-            <Route path="/" element={<ProtectedRoute><CommandCenterPage /></ProtectedRoute>} />
+            <Route path="/" element={<CommandCenterPage />} />
             <Route path="/containers" element={<ProtectedRoute><ContainersLedgerPage /></ProtectedRoute>} />
             <Route path="/alerts" element={<ProtectedRoute><AlertsPage /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
