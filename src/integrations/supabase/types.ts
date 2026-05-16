@@ -834,6 +834,17 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_admin_anywhere: { Args: { _user_id: string }; Returns: boolean }
+      is_any_org_member: { Args: { _user_id: string }; Returns: boolean }
+      is_coord_or_admin: {
+        Args: { _org_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_org_member: {
+        Args: { _org_id: string; _user_id: string }
+        Returns: boolean
+      }
+      shares_org: { Args: { _a: string; _b: string }; Returns: boolean }
     }
     Enums: {
       alert_tone: "danger" | "warning" | "info"

@@ -8,11 +8,14 @@ import { DailyIntel } from "@/features/command-center/components/DailyIntel";
 import { ContainerTable } from "@/features/command-center/components/ContainerTable";
 import { KpiStrip } from "@/features/command-center/components/KpiStrip";
 import { useAllContainers } from "@/shared/hooks/useContainers";
+import { useAuth } from "@/shared/auth/AuthProvider";
 
 const CommandCenterPage = () => {
   const [cmdOpen, setCmdOpen] = useState(false);
   const [pdfOpen, setPdfOpen] = useState(false);
   const containers = useAllContainers();
+  const { role } = useAuth();
+  const canWrite = role === "coordinator" || role === "admin";
   const activeCount = containers.length;
   const facilityCount = new Set(containers.map((c) => c.facility)).size;
   const currentWeek = containers[0]?.shipmentWeek ?? "—";
@@ -66,14 +69,16 @@ const CommandCenterPage = () => {
             <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-accent" />
           </button>
 
-          <button
-            onClick={() => setPdfOpen(true)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-semibold text-accent-foreground"
-            style={{ backgroundImage: "var(--gradient-action)", boxShadow: "var(--shadow-card)" }}
-          >
-            <Plus className="w-3.5 h-3.5" />
-            New booking
-          </button>
+          {canWrite && (
+            <button
+              onClick={() => setPdfOpen(true)}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-semibold text-accent-foreground"
+              style={{ backgroundImage: "var(--gradient-action)", boxShadow: "var(--shadow-card)" }}
+            >
+              <Plus className="w-3.5 h-3.5" />
+              New booking
+            </button>
+          )}
         </header>
 
         <div className="flex-1 overflow-y-auto">
@@ -97,7 +102,7 @@ const CommandCenterPage = () => {
       />
 
       {/* Hint pill */}
-      {!cmdOpen && !pdfOpen && (
+      {!cmdOpen && !pdfOpen && canWrite && (
         <div className="fixed bottom-4 right-4 flex items-center gap-2 px-3 py-2 rounded-full bg-primary text-primary-foreground text-xs shadow-elevated" style={{ boxShadow: "var(--shadow-elevated)" }}>
           <Sparkles className="w-3.5 h-3.5 text-accent" />
           Try <kbd className="px-1.5 py-0.5 bg-primary-glow rounded text-[10px]">⌘K</kbd> or drop a PDF on

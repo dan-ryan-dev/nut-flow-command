@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { containersQueryKey } from "@/shared/hooks/useContainers";
+import { useAuth } from "@/shared/auth/AuthProvider";
 
 interface Props {
   container: Container | null;
@@ -33,6 +34,8 @@ export const ErdLrdPanel = ({ container, open, onClose, onSaved }: Props) => {
   const [notes, setNotes] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
   const qc = useQueryClient();
+  const { role } = useAuth();
+  const canWrite = role === "coordinator" || role === "admin";
 
   // Pull live record (for erd/lrd/carrier_last_synced_at).
   const { data: live } = useQuery({
@@ -335,15 +338,17 @@ export const ErdLrdPanel = ({ container, open, onClose, onSaved }: Props) => {
           >
             Close
           </button>
-          <button
-            onClick={onSave}
-            disabled={!!validationError || save.isPending}
-            className="text-sm font-semibold px-3 py-1.5 rounded-md text-accent-foreground inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ backgroundImage: "var(--gradient-action)" }}
-          >
-            <Save className="w-3.5 h-3.5" />
-            {save.isPending ? "Syncing…" : "Save changes"}
-          </button>
+          {canWrite && (
+            <button
+              onClick={onSave}
+              disabled={!!validationError || save.isPending}
+              className="text-sm font-semibold px-3 py-1.5 rounded-md text-accent-foreground inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ backgroundImage: "var(--gradient-action)" }}
+            >
+              <Save className="w-3.5 h-3.5" />
+              {save.isPending ? "Syncing…" : "Save changes"}
+            </button>
+          )}
         </div>
       </SheetContent>
     </Sheet>
