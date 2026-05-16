@@ -1,15 +1,16 @@
 import { LayoutDashboard, Container, FileText, Ship, Building2, Bell, Settings, BookOpen, LogOut } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { useAuth } from "@/shared/auth/AuthProvider";
+import { useAuth, type AppRole } from "@/shared/auth/AuthProvider";
 
-const baseNav = [
-  { icon: LayoutDashboard, label: "Command Center", to: "/", roles: ["viewer", "coordinator", "admin"] as const },
-  { icon: Container, label: "Shipping Center", to: "/containers", roles: ["viewer", "coordinator", "admin"] as const },
-  { icon: Ship, label: "Vessels & ETAs", to: "#", roles: ["viewer", "coordinator", "admin"] as const },
-  { icon: FileText, label: "Phyto Certificates", to: "#", roles: ["viewer", "coordinator", "admin"] as const },
-  { icon: Building2, label: "Facilities", to: "#", roles: ["viewer", "coordinator", "admin"] as const },
-  { icon: Bell, label: "Alerts", to: "/alerts", roles: ["viewer", "coordinator", "admin"] as const },
-  { icon: Settings, label: "Settings", to: "/settings", roles: ["admin"] as const },
+const ALL: AppRole[] = ["viewer", "coordinator", "admin"];
+const baseNav: { icon: typeof LayoutDashboard; label: string; to: string; roles: AppRole[] }[] = [
+  { icon: LayoutDashboard, label: "Command Center", to: "/", roles: ALL },
+  { icon: Container, label: "Shipping Center", to: "/containers", roles: ALL },
+  { icon: Ship, label: "Vessels & ETAs", to: "#", roles: ALL },
+  { icon: FileText, label: "Phyto Certificates", to: "#", roles: ALL },
+  { icon: Building2, label: "Facilities", to: "#", roles: ALL },
+  { icon: Bell, label: "Alerts", to: "/alerts", roles: ALL },
+  { icon: Settings, label: "Settings", to: "/settings", roles: ["admin"] },
 ];
 
 const facilities = [
