@@ -102,7 +102,7 @@ const CommandCenterPage = () => {
       />
 
       {/* Hint pill */}
-      {!cmdOpen && !pdfOpen && (
+      {!cmdOpen && !pdfOpen && canWrite && (
         <div className="fixed bottom-4 right-4 flex items-center gap-2 px-3 py-2 rounded-full bg-primary text-primary-foreground text-xs shadow-elevated" style={{ boxShadow: "var(--shadow-elevated)" }}>
           <Sparkles className="w-3.5 h-3.5 text-accent" />
           Try <kbd className="px-1.5 py-0.5 bg-primary-glow rounded text-[10px]">⌘K</kbd> or drop a PDF on
