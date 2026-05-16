@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { containersQueryKey } from "@/shared/hooks/useContainers";
+import { InlineErrorBanner } from "@/shared/components/QueryStates";
 
 interface Props {
   open: boolean;
@@ -44,12 +45,14 @@ export const PdfBookingFlow = ({ open, onClose, onComplete }: Props) => {
   const [dragOver, setDragOver] = useState(false);
   const [parseStart, setParseStart] = useState<number>(0);
   const [saving, setSaving] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const qc = useQueryClient();
 
   useEffect(() => {
     if (!open) {
       setStage("drop");
       setProgress(0);
+      setSubmitError(null);
     }
   }, [open]);
 
@@ -76,6 +79,7 @@ export const PdfBookingFlow = ({ open, onClose, onComplete }: Props) => {
 
   const confirm = async () => {
     setSaving(true);
+    setSubmitError(null);
     const duration = Date.now() - parseStart;
     try {
       const { error: cErr } = await supabase.from("containers").insert({
@@ -100,7 +104,13 @@ export const PdfBookingFlow = ({ open, onClose, onComplete }: Props) => {
         shipment_week: "Week 19 · May 4–10",
         logistics_status: "pending-load",
       });
-      if (cErr && !cErr.message.includes("duplicate")) throw cErr;
+      if (cErr) {
+        const dup =
+          cErr.message?.toLowerCase().includes("duplicate") ||
+          (cErr as { code?: string }).code === "23505";
+        if (dup) throw new Error(`Booking ${BOOKING_ID} already exists`);
+        throw cErr;
+      }
 
       // Docs — phyto draft + the three other doc placeholders.
       const { error: dErr } = await supabase.from("documents").upsert(
@@ -132,6 +142,7 @@ export const PdfBookingFlow = ({ open, onClose, onComplete }: Props) => {
       }, 1200);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "unknown error";
+      setSubmitError(msg);
       toast.error("Could not save booking", { description: msg });
     } finally {
       setSaving(false);
@@ -216,6 +227,9 @@ export const PdfBookingFlow = ({ open, onClose, onComplete }: Props) => {
                 <span className="text-muted-foreground">Phyto certificate flagged as required — draft auto-generated.</span>
               </span>
             </div>
+            {submitError && (
+              <div className="px-5 pt-3"><InlineErrorBanner message={submitError} /></div>
+            )}
             <div className="overflow-y-auto p-5 grid grid-cols-2 gap-3">
               {fields.map((f) => (
                 <div
