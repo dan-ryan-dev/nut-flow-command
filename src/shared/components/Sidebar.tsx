@@ -1,14 +1,15 @@
-import { LayoutDashboard, Container, FileText, Ship, Building2, Bell, Settings, BookOpen } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import { LayoutDashboard, Container, FileText, Ship, Building2, Bell, Settings, BookOpen, LogOut } from "lucide-react";
+import { NavLink, useNavigate } from "react-router-dom";
+import { useAuth } from "@/shared/auth/AuthProvider";
 
-const nav = [
-  { icon: LayoutDashboard, label: "Command Center", to: "/" },
-  { icon: Container, label: "Shipping Center", to: "/containers" },
-  { icon: Ship, label: "Vessels & ETAs", to: "#" },
-  { icon: FileText, label: "Phyto Certificates", to: "#" },
-  { icon: Building2, label: "Facilities", to: "#" },
-  { icon: Bell, label: "Alerts", to: "/alerts" },
-  { icon: Settings, label: "Settings", to: "/settings" },
+const baseNav = [
+  { icon: LayoutDashboard, label: "Command Center", to: "/", roles: ["viewer", "coordinator", "admin"] as const },
+  { icon: Container, label: "Shipping Center", to: "/containers", roles: ["viewer", "coordinator", "admin"] as const },
+  { icon: Ship, label: "Vessels & ETAs", to: "#", roles: ["viewer", "coordinator", "admin"] as const },
+  { icon: FileText, label: "Phyto Certificates", to: "#", roles: ["viewer", "coordinator", "admin"] as const },
+  { icon: Building2, label: "Facilities", to: "#", roles: ["viewer", "coordinator", "admin"] as const },
+  { icon: Bell, label: "Alerts", to: "/alerts", roles: ["viewer", "coordinator", "admin"] as const },
+  { icon: Settings, label: "Settings", to: "/settings", roles: ["admin"] as const },
 ];
 
 const facilities = [
@@ -19,6 +20,20 @@ const facilities = [
 ];
 
 export const Sidebar = () => {
+  const { profile, role, signOut } = useAuth();
+  const navigate = useNavigate();
+  const nav = baseNav.filter((n) => !role || n.roles.includes(role));
+  const displayName = profile?.display_name ?? "User";
+  const initials = displayName
+    .split(/\s+/)
+    .map((s) => s[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/auth", { replace: true });
+  };
   return (
     <aside className="w-60 shrink-0 border-r border-border bg-card flex flex-col">
       <div className="px-5 py-5 flex items-center gap-2 border-b border-border">
@@ -92,12 +107,20 @@ export const Sidebar = () => {
           <BookOpen className="w-4 h-4" /> Compliance docs
         </button>
         <div className="flex items-center gap-2 px-2.5 py-2 rounded-md bg-secondary">
-          <div className="w-7 h-7 rounded-full bg-primary text-primary-foreground text-xs font-semibold flex items-center justify-center">MR</div>
-          <div className="leading-tight">
-            <div className="text-xs font-semibold text-foreground">Marisol Reyes</div>
-            <div className="text-[10px] text-muted-foreground">Logistics Lead · Salida</div>
+          <div className="w-7 h-7 rounded-full bg-primary text-primary-foreground text-xs font-semibold flex items-center justify-center">
+            {initials || "?"}
+          </div>
+          <div className="leading-tight flex-1 min-w-0">
+            <div className="text-xs font-semibold text-foreground truncate">{displayName}</div>
+            <div className="text-[10px] text-muted-foreground capitalize">{role ?? "—"}</div>
           </div>
         </div>
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm text-foreground/80 hover:bg-secondary"
+        >
+          <LogOut className="w-4 h-4" /> Logout
+        </button>
       </div>
     </aside>
   );
