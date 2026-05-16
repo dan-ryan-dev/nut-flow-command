@@ -10,10 +10,20 @@ import { ContainerTable } from "@/features/command-center/components/ContainerTa
 import { KpiStrip } from "@/features/command-center/components/KpiStrip";
 import { useAllContainers } from "@/shared/hooks/useContainers";
 import { useAuth } from "@/shared/auth/AuthProvider";
+import { ContainerDetailDialog } from "@/features/containers/components/ContainerDetailDialog";
+import type { Container } from "@/shared/data/types";
+
+const SEARCH_PILLS = [
+  "What is the ETA for MSC LORETO?",
+  "Show missing phytos for Week 19",
+  "Any delayed containers at Oakland?",
+];
 
 const CommandCenterPage = () => {
   const [cmdOpen, setCmdOpen] = useState(false);
   const [pdfOpen, setPdfOpen] = useState(false);
+  const [cmdInitialQuery, setCmdInitialQuery] = useState<string | undefined>(undefined);
+  const [selectedContainer, setSelectedContainer] = useState<Container | null>(null);
   const containers = useAllContainers();
   const { role, user } = useAuth();
   const canWrite = role === "coordinator" || role === "admin";
@@ -41,6 +51,11 @@ const CommandCenterPage = () => {
     setPdfOpen(true);
   };
 
+  const openCmd = (query?: string) => {
+    setCmdInitialQuery(query);
+    setCmdOpen(true);
+  };
+
   return (
     <div className="min-h-screen bg-background flex">
       <Sidebar />
@@ -61,40 +76,55 @@ const CommandCenterPage = () => {
           </div>
         )}
         {/* Top bar */}
-        <header className="h-14 border-b border-border bg-card px-6 flex items-center gap-4">
-          <div>
+        <header className="border-b border-border bg-card px-6 py-3 flex items-center gap-4">
+          <div className="min-w-0 shrink-0">
             <h1 className="text-base font-semibold text-foreground leading-none">Command Center</h1>
             <div className="text-[11px] text-muted-foreground mt-0.5">
-              {activeCount} active containers · {facilityCount} facilities · {currentWeek}
+              {activeCount} active · {facilityCount} facilities · {currentWeek}
             </div>
           </div>
 
-          <button
-            onClick={() => setCmdOpen(true)}
-            className="ml-auto flex items-center gap-2 w-[420px] px-3 py-1.5 rounded-md border border-border bg-secondary/60 hover:bg-secondary text-left transition-colors"
-          >
-            <Search className="w-3.5 h-3.5 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground flex-1">
-              Search containers, ask Daily Intel anything…
-            </span>
-            <kbd className="text-[10px] px-1.5 py-0.5 rounded bg-card border border-border text-muted-foreground">⌘K</kbd>
-          </button>
-
-          <button className="relative p-2 rounded-md hover:bg-secondary text-foreground/70">
-            <Bell className="w-4 h-4" />
-            <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-accent" />
-          </button>
-
-          {canWrite && (
+          <div className="flex-1 flex flex-col items-center gap-2 max-w-3xl mx-auto">
             <button
-              onClick={() => setPdfOpen(true)}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-semibold text-accent-foreground"
-              style={{ backgroundImage: "var(--gradient-action)", boxShadow: "var(--shadow-card)" }}
+              onClick={() => openCmd()}
+              className="w-full max-w-2xl flex items-center gap-2 px-4 py-2.5 rounded-lg border border-border bg-secondary/60 hover:bg-secondary text-left transition-colors shadow-sm"
             >
-              <Plus className="w-3.5 h-3.5" />
-              New booking
+              <Search className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground flex-1 truncate">
+                Search containers, ask Daily Intel anything (e.g., "Show ERD for booking BK-99182")...
+              </span>
+              <kbd className="text-[10px] px-1.5 py-0.5 rounded bg-card border border-border text-muted-foreground">⌘K</kbd>
             </button>
-          )}
+            <div className="flex items-center gap-1.5 flex-wrap justify-center">
+              {SEARCH_PILLS.map((p) => (
+                <button
+                  key={p}
+                  onClick={() => openCmd(p)}
+                  className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full border border-border bg-background hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <Sparkles className="w-3 h-3 text-accent" />
+                  {p}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button className="relative p-2 rounded-md hover:bg-secondary text-foreground/70">
+              <Bell className="w-4 h-4" />
+              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-accent" />
+            </button>
+            {canWrite && (
+              <button
+                onClick={() => setPdfOpen(true)}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-semibold text-accent-foreground"
+                style={{ backgroundImage: "var(--gradient-action)", boxShadow: "var(--shadow-card)" }}
+              >
+                <Plus className="w-3.5 h-3.5" />
+                New booking
+              </button>
+            )}
+          </div>
         </header>
 
         <div className="flex-1 overflow-y-auto">
@@ -110,7 +140,18 @@ const CommandCenterPage = () => {
         </div>
       </main>
 
-      <CommandBar open={cmdOpen} onClose={() => setCmdOpen(false)} onCreateBooking={openPdf} />
+      <CommandBar
+        open={cmdOpen}
+        onClose={() => setCmdOpen(false)}
+        onCreateBooking={openPdf}
+        onSelectContainer={(c) => setSelectedContainer(c)}
+        initialQuery={cmdInitialQuery}
+      />
+      <ContainerDetailDialog
+        container={selectedContainer}
+        open={!!selectedContainer}
+        onClose={() => setSelectedContainer(null)}
+      />
       <PdfBookingFlow
         open={pdfOpen}
         onClose={() => setPdfOpen(false)}
