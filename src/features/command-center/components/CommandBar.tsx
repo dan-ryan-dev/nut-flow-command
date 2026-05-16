@@ -190,7 +190,7 @@ export const CommandBar = ({ open, onClose, onCreateBooking }: Props) => {
               <div className="px-2 py-1.5 text-[10px] uppercase tracking-widest text-muted-foreground">Alerts</div>
               {alertMatches.map((a) => (
                 <div key={a.id} className="flex items-center gap-3 px-2.5 py-2 rounded-md hover:bg-secondary cursor-pointer">
-                  <AlertTriangle className={`w-4 h-4 ${a.tone === "critical" ? "text-destructive" : a.tone === "warning" ? "text-warning" : "text-primary"}`} />
+                  <AlertTriangle className={`w-4 h-4 ${a.tone === "danger" ? "text-destructive" : a.tone === "warning" ? "text-warning" : "text-primary"}`} />
                   <div className="flex-1 min-w-0">
                     <div className="text-sm text-foreground truncate">{a.status_text}</div>
                     <div className="text-xs text-muted-foreground truncate">
