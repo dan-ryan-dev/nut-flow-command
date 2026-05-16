@@ -260,15 +260,17 @@ export const PhytoCertificationPanel = ({ container, open, onClose }: Props) => 
             <FileSearch className="w-3.5 h-3.5" />
             Preview Draft
           </button>
-          <button
-            onClick={handleSubmit}
-            disabled={fetchState !== "ready"}
-            className="text-sm font-semibold px-3 py-1.5 rounded-md text-accent-foreground inline-flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
-            style={{ backgroundImage: "var(--gradient-action)" }}
-          >
-            <Send className="w-3.5 h-3.5" />
-            Submit to USDA
-          </button>
+          {canWrite && (
+            <button
+              onClick={handleSubmit}
+              disabled={fetchState !== "ready"}
+              className="text-sm font-semibold px-3 py-1.5 rounded-md text-accent-foreground inline-flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{ backgroundImage: "var(--gradient-action)" }}
+            >
+              <Send className="w-3.5 h-3.5" />
+              Submit to USDA
+            </button>
+          )}
         </div>
         <PhytoPdfPreview
           container={container}
