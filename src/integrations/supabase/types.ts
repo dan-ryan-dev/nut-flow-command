@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      alert_rules: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          id: string
+          name: string
+          org_id: string | null
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          id?: string
+          name: string
+          org_id?: string | null
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          id?: string
+          name?: string
+          org_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alert_rules_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       alerts: {
         Row: {
           acknowledged: boolean
@@ -23,6 +58,7 @@ export type Database = {
           created_at: string
           id: string
           occurred_at: string
+          org_id: string | null
           status_text: string
           tag: string
           tone: Database["public"]["Enums"]["alert_tone"]
@@ -35,6 +71,7 @@ export type Database = {
           created_at?: string
           id?: string
           occurred_at?: string
+          org_id?: string | null
           status_text: string
           tag: string
           tone?: Database["public"]["Enums"]["alert_tone"]
@@ -47,11 +84,55 @@ export type Database = {
           created_at?: string
           id?: string
           occurred_at?: string
+          org_id?: string | null
           status_text?: string
           tag?: string
           tone?: Database["public"]["Enums"]["alert_tone"]
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "alerts_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      buyers: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          id: string
+          name: string
+          org_id: string | null
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          id?: string
+          name: string
+          org_id?: string | null
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          id?: string
+          name?: string
+          org_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "buyers_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       carriers: {
         Row: {
@@ -59,6 +140,7 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          org_id: string | null
           scac: string
         }
         Insert: {
@@ -66,6 +148,7 @@ export type Database = {
           created_at?: string
           id?: string
           name: string
+          org_id?: string | null
           scac: string
         }
         Update: {
@@ -73,24 +156,37 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
+          org_id?: string | null
           scac?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "carriers_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       containers: {
         Row: {
           alert: string | null
           booking_id: string
           buyer: string
+          carrier_last_synced_at: string | null
           container_id: string
           created_at: string
           cutoff: string
           destination: string
+          erd: string | null
           eta: string
           eta_delayed: boolean
           facility: string
           logistics_status: Database["public"]["Enums"]["logistics_status"]
           lots: string[]
+          lrd: string | null
+          org_id: string | null
           phyto_complete: boolean
           pod: string
           pol: string
@@ -106,15 +202,19 @@ export type Database = {
           alert?: string | null
           booking_id: string
           buyer: string
+          carrier_last_synced_at?: string | null
           container_id: string
           created_at?: string
           cutoff: string
           destination: string
+          erd?: string | null
           eta: string
           eta_delayed?: boolean
           facility: string
           logistics_status?: Database["public"]["Enums"]["logistics_status"]
           lots?: string[]
+          lrd?: string | null
+          org_id?: string | null
           phyto_complete?: boolean
           pod: string
           pol: string
@@ -130,15 +230,19 @@ export type Database = {
           alert?: string | null
           booking_id?: string
           buyer?: string
+          carrier_last_synced_at?: string | null
           container_id?: string
           created_at?: string
           cutoff?: string
           destination?: string
+          erd?: string | null
           eta?: string
           eta_delayed?: boolean
           facility?: string
           logistics_status?: Database["public"]["Enums"]["logistics_status"]
           lots?: string[]
+          lrd?: string | null
+          org_id?: string | null
           phyto_complete?: boolean
           pod?: string
           pol?: string
@@ -150,7 +254,47 @@ export type Database = {
           voyage?: string
           weight_kg?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "containers_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_briefings: {
+        Row: {
+          briefing_date: string
+          cards: Json
+          generated_at: string
+          id: string
+          org_id: string | null
+        }
+        Insert: {
+          briefing_date: string
+          cards?: Json
+          generated_at?: string
+          id?: string
+          org_id?: string | null
+        }
+        Update: {
+          briefing_date?: string
+          cards?: Json
+          generated_at?: string
+          id?: string
+          org_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_briefings_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       documents: {
         Row: {
@@ -160,6 +304,7 @@ export type Database = {
           file_url: string | null
           id: string
           notes: string | null
+          org_id: string | null
           status: Database["public"]["Enums"]["doc_status"]
           updated_at: string
         }
@@ -170,6 +315,7 @@ export type Database = {
           file_url?: string | null
           id?: string
           notes?: string | null
+          org_id?: string | null
           status?: Database["public"]["Enums"]["doc_status"]
           updated_at?: string
         }
@@ -180,10 +326,171 @@ export type Database = {
           file_url?: string | null
           id?: string
           notes?: string | null
+          org_id?: string | null
           status?: Database["public"]["Enums"]["doc_status"]
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "documents_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      drayage_carriers: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          id: string
+          name: string
+          org_id: string | null
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          id?: string
+          name: string
+          org_id?: string | null
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          id?: string
+          name?: string
+          org_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "drayage_carriers_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      intake_metrics: {
+        Row: {
+          accuracy_pct: number
+          booking_id: string
+          created_at: string
+          duration_ms: number
+          fields_extracted: number
+          id: string
+          org_id: string | null
+          pdf_filename: string | null
+        }
+        Insert: {
+          accuracy_pct: number
+          booking_id: string
+          created_at?: string
+          duration_ms: number
+          fields_extracted: number
+          id?: string
+          org_id?: string | null
+          pdf_filename?: string | null
+        }
+        Update: {
+          accuracy_pct?: number
+          booking_id?: string
+          created_at?: string
+          duration_ms?: number
+          fields_extracted?: number
+          id?: string
+          org_id?: string | null
+          pdf_filename?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intake_metrics_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kpi_snapshots: {
+        Row: {
+          action_count: number
+          containers_count: number
+          demurrage_usd: number
+          id: string
+          logged_realtime: number
+          org_id: string | null
+          shipment_week: string
+          taken_at: string
+        }
+        Insert: {
+          action_count?: number
+          containers_count?: number
+          demurrage_usd?: number
+          id?: string
+          logged_realtime?: number
+          org_id?: string | null
+          shipment_week: string
+          taken_at?: string
+        }
+        Update: {
+          action_count?: number
+          containers_count?: number
+          demurrage_usd?: number
+          id?: string
+          logged_realtime?: number
+          org_id?: string | null
+          shipment_week?: string
+          taken_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kpi_snapshots_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      labs: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          id: string
+          name: string
+          org_id: string | null
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          id?: string
+          name: string
+          org_id?: string | null
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          id?: string
+          name?: string
+          org_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "labs_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       logistics_events: {
         Row: {
@@ -192,6 +499,7 @@ export type Database = {
           id: string
           notes: string | null
           occurred_at: string
+          org_id: string | null
           status: Database["public"]["Enums"]["logistics_status"]
         }
         Insert: {
@@ -200,6 +508,7 @@ export type Database = {
           id?: string
           notes?: string | null
           occurred_at?: string
+          org_id?: string | null
           status: Database["public"]["Enums"]["logistics_status"]
         }
         Update: {
@@ -208,6 +517,7 @@ export type Database = {
           id?: string
           notes?: string | null
           occurred_at?: string
+          org_id?: string | null
           status?: Database["public"]["Enums"]["logistics_status"]
         }
         Relationships: [
@@ -218,6 +528,297 @@ export type Database = {
             referencedRelation: "containers"
             referencedColumns: ["container_id"]
           },
+          {
+            foreignKeyName: "logistics_events_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      pack_types: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          id: string
+          name: string
+          org_id: string | null
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          id?: string
+          name: string
+          org_id?: string | null
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          id?: string
+          name?: string
+          org_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pack_types_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_terms: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          id: string
+          name: string
+          org_id: string | null
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          id?: string
+          name: string
+          org_id?: string | null
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          id?: string
+          name?: string
+          org_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_terms_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ports: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+          unlocode: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+          unlocode: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+          unlocode?: string
+        }
+        Relationships: []
+      }
+      products: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          id: string
+          name: string
+          org_id: string | null
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          id?: string
+          name: string
+          org_id?: string | null
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          id?: string
+          name?: string
+          org_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          id: string
+          org_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          org_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          org_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      terminals: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          id: string
+          name: string
+          org_id: string | null
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          id?: string
+          name: string
+          org_id?: string | null
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          id?: string
+          name?: string
+          org_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "terminals_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          org_id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          org_id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          org_id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vessels: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          id: string
+          name: string
+          org_id: string | null
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          id?: string
+          name: string
+          org_id?: string | null
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          id?: string
+          name?: string
+          org_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vessels_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
         ]
       }
     }
@@ -225,10 +826,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _org_id: string
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       alert_tone: "danger" | "warning" | "info"
+      app_role: "admin" | "coordinator" | "viewer"
       container_status:
         | "action"
         | "in-transit"
@@ -372,6 +981,7 @@ export const Constants = {
   public: {
     Enums: {
       alert_tone: ["danger", "warning", "info"],
+      app_role: ["admin", "coordinator", "viewer"],
       container_status: [
         "action",
         "in-transit",

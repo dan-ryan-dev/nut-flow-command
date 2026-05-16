@@ -7,10 +7,15 @@ import { PdfBookingFlow } from "@/features/command-center/components/PdfBookingF
 import { DailyIntel } from "@/features/command-center/components/DailyIntel";
 import { ContainerTable } from "@/features/command-center/components/ContainerTable";
 import { KpiStrip } from "@/features/command-center/components/KpiStrip";
+import { useAllContainers } from "@/shared/hooks/useContainers";
 
 const CommandCenterPage = () => {
   const [cmdOpen, setCmdOpen] = useState(false);
   const [pdfOpen, setPdfOpen] = useState(false);
+  const containers = useAllContainers();
+  const activeCount = containers.length;
+  const facilityCount = new Set(containers.map((c) => c.facility)).size;
+  const currentWeek = containers[0]?.shipmentWeek ?? "—";
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -40,7 +45,9 @@ const CommandCenterPage = () => {
         <header className="h-14 border-b border-border bg-card px-6 flex items-center gap-4">
           <div>
             <h1 className="text-base font-semibold text-foreground leading-none">Command Center</h1>
-            <div className="text-[11px] text-muted-foreground mt-0.5">42 active containers · 4 facilities · Week 19</div>
+            <div className="text-[11px] text-muted-foreground mt-0.5">
+              {activeCount} active containers · {facilityCount} facilities · {currentWeek}
+            </div>
           </div>
 
           <button
