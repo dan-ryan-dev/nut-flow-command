@@ -87,8 +87,11 @@ const fetchAll = async (): Promise<Container[]> => {
 
 export const containersQueryKey = ["containers"] as const;
 
+export const useAllContainersQuery = () =>
+  useQuery({ queryKey: containersQueryKey, queryFn: fetchAll });
+
 export const useAllContainers = (): Container[] => {
-  const { data } = useQuery({ queryKey: containersQueryKey, queryFn: fetchAll });
+  const { data } = useAllContainersQuery();
   return data ?? [];
 };
 
