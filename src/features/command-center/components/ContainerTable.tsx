@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { containers, type Container } from "@/shared/data/containers";
+import type { Container } from "@/shared/data/types";
+import { useAllContainersQuery } from "@/shared/hooks/useContainers";
 import { AlertTriangle, CheckCircle2, Ship, Anchor, FileText, MoreHorizontal, Paperclip, Clock } from "lucide-react";
 import { PhytoCertificationPanel } from "@/features/phyto/components/PhytoCertificationPanel";
 import { ErdLrdPanel } from "@/features/erd-lrd/components/ErdLrdPanel";
 import { usePhytoAttached, usePhytoPending } from "@/features/phyto/state/phytoStore";
+import { QueryErrorCard, EmptyState, SkeletonRows } from "@/shared/components/QueryStates";
 
 const statusBadge = (s: Container["status"]) => {
   switch (s) {
@@ -24,12 +26,15 @@ export const ContainerTable = () => {
   const [phytoFor, setPhytoFor] = useState<Container | null>(null);
   const [erdFor, setErdFor] = useState<Container | null>(null);
   const [flashId, setFlashId] = useState<string | null>(null);
+  const cq = useAllContainersQuery();
+  const containers = cq.data ?? [];
+  const actionCount = containers.filter((c) => c.status === "action").length;
   return (
     <section className="bg-card rounded-lg border border-border overflow-hidden">
       <div className="px-5 py-3 border-b border-border flex items-center justify-between">
         <div>
           <div className="text-[10px] uppercase tracking-widest text-muted-foreground">This week's containers</div>
-          <div className="text-sm font-semibold text-foreground">42 active · 3 need attention</div>
+          <div className="text-sm font-semibold text-foreground">{containers.length} active · {actionCount} need attention</div>
         </div>
         <div className="flex items-center gap-1 text-xs">
           {["All", "Action", "In transit", "At POD", "Delivered"].map((t, i) => (
@@ -42,6 +47,13 @@ export const ContainerTable = () => {
           ))}
         </div>
       </div>
+      {cq.isLoading ? (
+        <div className="p-4"><SkeletonRows rows={6} rowClassName="h-12" /></div>
+      ) : cq.isError ? (
+        <QueryErrorCard error={cq.error} onRetry={() => cq.refetch()} title="Couldn't load containers" />
+      ) : containers.length === 0 ? (
+        <EmptyState title="No containers yet" description="Log your first booking to see it here." />
+      ) : (
       <table className="w-full text-sm">
         <thead>
           <tr className="text-[10px] uppercase tracking-wider text-muted-foreground bg-secondary/50">
@@ -113,6 +125,7 @@ export const ContainerTable = () => {
           })}
         </tbody>
       </table>
+      )}
       <PhytoCertificationPanel container={phytoFor} open={!!phytoFor} onClose={() => setPhytoFor(null)} />
       <ErdLrdPanel
         container={erdFor}

@@ -2,6 +2,7 @@ import { Sparkles, AlertTriangle, Ship, Database, TrendingUp, ChevronRight, Shie
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { QueryErrorCard, SkeletonRows } from "@/shared/components/QueryStates";
 
 type Tone = "action" | "warn" | "info" | "good";
 type Card = { icon: string; tone: Tone; title: string; body: string; cta: string };
@@ -28,7 +29,7 @@ const iconStyles: Record<Tone, string> = {
 };
 
 export const DailyIntel = () => {
-  const { data } = useQuery({
+  const briefingQ = useQuery({
     queryKey: ["daily_briefings", "latest"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -41,7 +42,7 @@ export const DailyIntel = () => {
       return data;
     },
   });
-
+  const data = briefingQ.data;
   const cards: Card[] = Array.isArray(data?.cards) ? (data!.cards as unknown as Card[]) : [];
   const dateLabel = data?.briefing_date
     ? new Date(data.briefing_date as string).toLocaleDateString(undefined, {
@@ -76,12 +77,15 @@ export const DailyIntel = () => {
         </TooltipProvider>
       </div>
       <div className="divide-y divide-border">
-        {cards.length === 0 && (
+        {briefingQ.isLoading ? (
+          <div className="p-4"><SkeletonRows rows={4} rowClassName="h-14" /></div>
+        ) : briefingQ.isError ? (
+          <QueryErrorCard error={briefingQ.error} onRetry={() => briefingQ.refetch()} title="Couldn't load briefing" />
+        ) : cards.length === 0 ? (
           <div className="px-5 py-8 text-center text-sm text-muted-foreground">
             No briefing yet for today.
           </div>
-        )}
-        {cards.map((b) => {
+        ) : cards.map((b) => {
           const Icon = iconMap[b.icon] ?? Database;
           return (
             <div key={b.title} className={`flex gap-4 px-5 py-3.5 border-l-4 ${toneStyles[b.tone]}`}>

@@ -165,7 +165,13 @@ export const CommandBar = ({ open, onClose, onCreateBooking }: Props) => {
                     ) : matches.length ? (
                       <>Found <span className="font-semibold">{matches.length}</span> containers matching "{q}".</>
                     ) : (
-                      <>No matches in the live ledger. AI answers will be wired up in the next iteration.</>
+                      <>
+                        No matches in the live ledger.{" "}
+                        <button onClick={onCreateBooking} className="font-semibold text-accent underline underline-offset-2 hover:text-accent">
+                          Start a new booking
+                        </button>{" "}
+                        instead.
+                      </>
                     )}
                   </div>
                 </div>

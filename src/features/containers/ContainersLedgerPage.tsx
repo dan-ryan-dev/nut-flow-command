@@ -2,9 +2,13 @@ import { useMemo, useState } from "react";
 import { Sidebar } from "@/shared/components/Sidebar";
 import { ContainerLedger } from "@/features/containers/components/ContainerLedger";
 import type { Container } from "@/shared/data/types";
-import { useAllContainers, isIssueRow } from "@/shared/hooks/useContainers";
+import { useAllContainersQuery, isIssueRow } from "@/shared/hooks/useContainers";
 import { Switch } from "@/components/ui/switch";
-import { Search, Download } from "lucide-react";
+import { Search, Download, FileUp } from "lucide-react";
+import { QueryErrorCard, EmptyState, SkeletonRows, SkeletonBlock } from "@/shared/components/QueryStates";
+import { PdfBookingFlow } from "@/features/command-center/components/PdfBookingFlow";
+import { useAuth } from "@/shared/auth/AuthProvider";
+import { toast } from "sonner";
 
 const toCsv = (rows: Container[]) => {
   const header = ["Container", "Booking", "Lots", "Buyer", "Destination", "Status", "Docs", "Shipment Week"];
@@ -20,7 +24,11 @@ const toCsv = (rows: Container[]) => {
 const ContainersLedgerPage = () => {
   const [issuesOnly, setIssuesOnly] = useState(false);
   const [query, setQuery] = useState("");
-  const containers = useAllContainers();
+  const [pdfOpen, setPdfOpen] = useState(false);
+  const { role } = useAuth();
+  const canWrite = role === "coordinator" || role === "admin";
+  const cq = useAllContainersQuery();
+  const containers = cq.data ?? [];
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -83,14 +91,43 @@ const ContainersLedgerPage = () => {
 
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-[1400px] mx-auto px-6 py-6 space-y-6">
-            <div className="grid grid-cols-4 gap-3">
-              <Kpi label="Total containers" value={String(containers.length)} sub="across 3 weeks" />
-              <Kpi label="Action required" value={String(containers.filter(isIssueRow).length)} sub="missing docs / delayed" tone="action" />
-              <Kpi label="On vessel / arrived" value={String(containers.filter((c) => ["loaded-vessel", "arrived-discharge"].includes(c.logisticsStatus)).length)} sub="post-gate-in" tone="good" />
-              <Kpi label="Closed" value={String(containers.filter((c) => c.logisticsStatus === "closed").length)} sub="admin complete" />
-            </div>
-
-            <ContainerLedger rows={filtered} />
+            {cq.isLoading ? (
+              <>
+                <div className="grid grid-cols-4 gap-3">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <SkeletonBlock key={i} className="h-24" />
+                  ))}
+                </div>
+                <SkeletonRows rows={6} rowClassName="h-14" />
+              </>
+            ) : cq.isError ? (
+              <QueryErrorCard error={cq.error} onRetry={() => cq.refetch()} title="Couldn't load shipments" />
+            ) : containers.length === 0 ? (
+              <EmptyState
+                title="No shipments yet"
+                description="Drop a carrier PDF to log your first booking."
+                action={
+                  canWrite && (
+                    <button
+                      onClick={() => setPdfOpen(true)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-xs font-semibold"
+                    >
+                      <FileUp className="w-3 h-3" /> New booking
+                    </button>
+                  )
+                }
+              />
+            ) : (
+              <>
+                <div className="grid grid-cols-4 gap-3">
+                  <Kpi label="Total containers" value={String(containers.length)} sub="across 3 weeks" />
+                  <Kpi label="Action required" value={String(containers.filter(isIssueRow).length)} sub="missing docs / delayed" tone="action" />
+                  <Kpi label="On vessel / arrived" value={String(containers.filter((c) => ["loaded-vessel", "arrived-discharge"].includes(c.logisticsStatus)).length)} sub="post-gate-in" tone="good" />
+                  <Kpi label="Closed" value={String(containers.filter((c) => c.logisticsStatus === "closed").length)} sub="admin complete" />
+                </div>
+                <ContainerLedger rows={filtered} />
+              </>
+            )}
 
             <div className="text-center text-[11px] text-muted-foreground py-2">
               Layered on Nomos DB · Capay Canyon Ranch · Synced 12 sec ago
@@ -98,6 +135,11 @@ const ContainersLedgerPage = () => {
           </div>
         </div>
       </main>
+      <PdfBookingFlow
+        open={pdfOpen}
+        onClose={() => setPdfOpen(false)}
+        onComplete={() => toast.success("Booking logged")}
+      />
     </div>
   );
 };

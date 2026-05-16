@@ -7,6 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { containersQueryKey } from "@/shared/hooks/useContainers";
 import { useAuth } from "@/shared/auth/AuthProvider";
+import { InlineErrorBanner } from "@/shared/components/QueryStates";
 
 interface Props {
   container: Container | null;
@@ -36,6 +37,7 @@ export const ErdLrdPanel = ({ container, open, onClose, onSaved }: Props) => {
   const qc = useQueryClient();
   const { role } = useAuth();
   const canWrite = role === "coordinator" || role === "admin";
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Pull live record (for erd/lrd/carrier_last_synced_at).
   const { data: live } = useQuery({
@@ -106,6 +108,7 @@ export const ErdLrdPanel = ({ container, open, onClose, onSaved }: Props) => {
       if (eErr) throw eErr;
     },
     onSuccess: () => {
+      setSubmitError(null);
       toast.success("Sync Successful", {
         description: `${container?.id} · new ERD ${erd.replace("T", " ")} · LRD ${lrd.replace("T", " ")}`,
       });
@@ -115,7 +118,10 @@ export const ErdLrdPanel = ({ container, open, onClose, onSaved }: Props) => {
       if (container) onSaved?.(container.id);
       onClose();
     },
-    onError: (e: Error) => toast.error("Save failed", { description: e.message }),
+    onError: (e: Error) => {
+      setSubmitError(e.message);
+      toast.error("Save failed", { description: e.message });
+    },
   });
 
   if (!container) return null;
@@ -174,6 +180,10 @@ export const ErdLrdPanel = ({ container, open, onClose, onSaved }: Props) => {
             </div>
           )}
         </SheetHeader>
+
+        {submitError && (
+          <div className="mx-6 mt-4"><InlineErrorBanner message={submitError} /></div>
+        )}
 
         {container.alert && (
           <div className="mx-6 mt-4 p-3 rounded-md border border-accent/30 bg-accent-soft text-xs text-foreground flex gap-2">
