@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { containersQueryKey } from "@/shared/hooks/useContainers";
+import { useAuth } from "@/shared/auth/AuthProvider";
 
 interface Props {
   container: Container | null;
@@ -33,6 +34,8 @@ export const ErdLrdPanel = ({ container, open, onClose, onSaved }: Props) => {
   const [notes, setNotes] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
   const qc = useQueryClient();
+  const { role } = useAuth();
+  const canWrite = role === "coordinator" || role === "admin";
 
   // Pull live record (for erd/lrd/carrier_last_synced_at).
   const { data: live } = useQuery({
