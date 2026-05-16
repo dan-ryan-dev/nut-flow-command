@@ -1,10 +1,16 @@
 import { useState } from "react";
 import { Sidebar } from "@/shared/components/Sidebar";
-import { AlertTriangle, Check } from "lucide-react";
+import { AlertTriangle, Check, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/shared/auth/AuthProvider";
+import {
+  QueryErrorCard,
+  EmptyState,
+  SkeletonRows,
+  InlineErrorBanner,
+} from "@/shared/components/QueryStates";
 
 type AlertRow = {
   id: string;
@@ -48,6 +54,7 @@ const AlertsPage = () => {
   const qc = useQueryClient();
   const { role } = useAuth();
   const canAck = role === "coordinator" || role === "admin";
+  const [ackError, setAckError] = useState<string | null>(null);
 
   const ack = useMutation({
     mutationFn: async (id: string) => {
@@ -58,15 +65,19 @@ const AlertsPage = () => {
       if (error) throw error;
     },
     onSuccess: (_d, id) => {
+      setAckError(null);
       const item = activeQ.data?.find((a) => a.id === id);
       toast.success(`${item?.container_ref ?? item?.booking_ref ?? "Alert"} acknowledged`);
       qc.invalidateQueries({ queryKey: ["alerts"] });
     },
-    onError: (e: Error) => toast.error("Could not acknowledge", { description: e.message }),
+    onError: (e: Error) => {
+      setAckError(e.message);
+      toast.error("Could not acknowledge", { description: e.message });
+    },
   });
 
-  const rows = tab === "active" ? activeQ.data ?? [] : historyQ.data ?? [];
-  const loading = (tab === "active" ? activeQ.isLoading : historyQ.isLoading);
+  const currentQ = tab === "active" ? activeQ : historyQ;
+  const rows = currentQ.data ?? [];
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -104,16 +115,19 @@ const AlertsPage = () => {
               </div>
             </div>
 
+            <InlineErrorBanner message={ackError} />
             <div className="rounded-lg border border-border bg-card divide-y divide-border">
-              {loading && (
-                <div className="p-10 text-center text-sm text-muted-foreground">Loading alerts…</div>
-              )}
-              {!loading && rows.length === 0 && (
-                <div className="p-10 text-center text-sm text-muted-foreground">
-                  {tab === "active" ? "All clear — no active alerts." : "No resolved alerts yet."}
-                </div>
-              )}
-              {rows.map((a) => (
+              {currentQ.isLoading ? (
+                <div className="p-4"><SkeletonRows rows={4} rowClassName="h-12" /></div>
+              ) : currentQ.isError ? (
+                <QueryErrorCard error={currentQ.error} onRetry={() => currentQ.refetch()} title="Couldn't load alerts" />
+              ) : rows.length === 0 ? (
+                <EmptyState
+                  icon={<ShieldCheck className="w-5 h-5 text-success" />}
+                  title={tab === "active" ? "All clear" : "No resolved alerts yet"}
+                  description={tab === "active" ? "No active alerts. Nothing to worry about." : undefined}
+                />
+              ) : rows.map((a) => (
                 <div key={a.id} className="flex items-center gap-4 px-5 py-3.5">
                   <AlertTriangle className={`w-4 h-4 shrink-0 ${a.tone === "danger" ? "text-accent" : a.tone === "warning" ? "text-warning" : "text-muted-foreground"}`} />
                   <span className={`text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded border ${toneStyles[a.tone]}`}>
