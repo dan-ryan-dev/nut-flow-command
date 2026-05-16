@@ -3,6 +3,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { QueryErrorCard, SkeletonBlock } from "@/shared/components/QueryStates";
 
 interface Kpi {
   label: string;
@@ -11,7 +12,7 @@ interface Kpi {
   tone: "default" | "action" | "good";
 }
 
-const useKpis = (): Kpi[] => {
+const useKpisRaw = () => {
   const containersQ = useQuery({
     queryKey: ["containers", "kpi"],
     queryFn: async () => {
@@ -36,44 +37,49 @@ const useKpis = (): Kpi[] => {
       return data;
     },
   });
+  return { containersQ, snapshotQ };
+};
 
-  const rows = containersQ.data ?? [];
-  const week = snapshotQ.data?.shipment_week ?? rows[0]?.shipment_week ?? "this week";
+const buildKpis = (
+  rows: { status: string; shipment_week: string; logistics_status: string }[],
+  snapshot: { shipment_week?: string; logged_realtime?: number; demurrage_usd?: number } | null,
+): Kpi[] => {
+  const week = snapshot?.shipment_week ?? rows[0]?.shipment_week ?? "this week";
   const thisWeek = rows.filter((r) => r.shipment_week === week);
   const actionCount = rows.filter((r) => r.status === "action").length;
-  const loggedRealtime = snapshotQ.data?.logged_realtime ?? thisWeek.length;
-  const demurrage = Number(snapshotQ.data?.demurrage_usd ?? 0);
-
+  const loggedRealtime = snapshot?.logged_realtime ?? thisWeek.length;
+  const demurrage = Number(snapshot?.demurrage_usd ?? 0);
   return [
-    {
-      label: "Containers this week",
-      value: String(thisWeek.length),
-      sub: `${week}`,
-      tone: "default",
-    },
-    {
-      label: "Action required",
-      value: String(actionCount),
-      sub: "Phyto + cutoffs",
-      tone: "action",
-    },
-    {
-      label: "Logged real-time",
-      value: `${loggedRealtime} / ${thisWeek.length || rows.length}`,
-      sub: "Carrier feed sync",
-      tone: "good",
-    },
-    {
-      label: "Demurrage risk",
-      value: `$${demurrage.toLocaleString()}`,
-      sub: "14-day rollup",
-      tone: "good",
-    },
+    { label: "Containers this week", value: String(thisWeek.length), sub: `${week}`, tone: "default" },
+    { label: "Action required", value: String(actionCount), sub: "Phyto + cutoffs", tone: "action" },
+    { label: "Logged real-time", value: `${loggedRealtime} / ${thisWeek.length || rows.length}`, sub: "Carrier feed sync", tone: "good" },
+    { label: "Demurrage risk", value: `$${demurrage.toLocaleString()}`, sub: "14-day rollup", tone: "good" },
   ];
 };
 
 export const KpiStrip = () => {
-  const kpis = useKpis();
+  const { containersQ, snapshotQ } = useKpisRaw();
+  const isLoading = containersQ.isLoading || snapshotQ.isLoading;
+  const error = containersQ.error ?? snapshotQ.error;
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-4 gap-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <SkeletonBlock key={i} className="h-[86px]" />
+        ))}
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <QueryErrorCard
+        error={error}
+        onRetry={() => { containersQ.refetch(); snapshotQ.refetch(); }}
+        title="Couldn't load KPIs"
+      />
+    );
+  }
+  const kpis = buildKpis(containersQ.data ?? [], snapshotQ.data ?? null);
   return (
     <div className="grid grid-cols-4 gap-3">
       {kpis.map((k) => (
