@@ -169,6 +169,39 @@ export type Database = {
           },
         ]
       }
+      container_comments: {
+        Row: {
+          author_id: string
+          author_name: string | null
+          body: string
+          container_id: string
+          created_at: string
+          id: string
+          org_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          author_id?: string
+          author_name?: string | null
+          body: string
+          container_id: string
+          created_at?: string
+          id?: string
+          org_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          author_name?: string | null
+          body?: string
+          container_id?: string
+          created_at?: string
+          id?: string
+          org_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       containers: {
         Row: {
           alert: string | null
@@ -191,6 +224,7 @@ export type Database = {
           pod: string
           pol: string
           product: string
+          purchase_order: string | null
           shipment_week: string
           status: Database["public"]["Enums"]["container_status"]
           updated_at: string
@@ -219,6 +253,7 @@ export type Database = {
           pod: string
           pol: string
           product: string
+          purchase_order?: string | null
           shipment_week: string
           status?: Database["public"]["Enums"]["container_status"]
           updated_at?: string
@@ -247,6 +282,7 @@ export type Database = {
           pod?: string
           pol?: string
           product?: string
+          purchase_order?: string | null
           shipment_week?: string
           status?: Database["public"]["Enums"]["container_status"]
           updated_at?: string
