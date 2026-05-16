@@ -5,6 +5,11 @@ import { toast } from "sonner";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+// Settings reads/writes 11 different reference tables; the table name is
+// chosen at runtime so we use a loose client for these queries.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const db = supabase as any;
+
 type Tab =
   | "Shipping Lines"
   | "Vessels"
@@ -60,8 +65,8 @@ const SettingsPage = () => {
   const { data, isLoading } = useQuery({
     queryKey: ["settings", cfg.table],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from(cfg.table as never)
+      const { data, error } = await db
+        .from(cfg.table)
         .select(`id, name, active, ${cfg.codeKey}`)
         .order("name");
       if (error) throw error;
@@ -78,7 +83,7 @@ const SettingsPage = () => {
         active: true,
       };
       if (cfg.orgScoped) payload.org_id = DEFAULT_ORG;
-      const { error } = await supabase.from(cfg.table as never).insert(payload as never);
+      const { error } = await db.from(cfg.table).insert(payload);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -90,9 +95,9 @@ const SettingsPage = () => {
 
   const toggleMut = useMutation({
     mutationFn: async (row: Row) => {
-      const { error } = await supabase
-        .from(cfg.table as never)
-        .update({ active: !row.active } as never)
+      const { error } = await db
+        .from(cfg.table)
+        .update({ active: !row.active })
         .eq("id", row.id);
       if (error) throw error;
     },
@@ -105,9 +110,9 @@ const SettingsPage = () => {
 
   const renameMut = useMutation({
     mutationFn: async ({ row, name }: { row: Row; name: string }) => {
-      const { error } = await supabase
-        .from(cfg.table as never)
-        .update({ name } as never)
+      const { error } = await db
+        .from(cfg.table)
+        .update({ name })
         .eq("id", row.id);
       if (error) throw error;
     },
