@@ -181,6 +181,10 @@ export const ErdLrdPanel = ({ container, open, onClose, onSaved }: Props) => {
           )}
         </SheetHeader>
 
+        {submitError && (
+          <div className="mx-6 mt-4"><InlineErrorBanner message={submitError} /></div>
+        )}
+
         {container.alert && (
           <div className="mx-6 mt-4 p-3 rounded-md border border-accent/30 bg-accent-soft text-xs text-foreground flex gap-2">
             <AlertTriangle className="w-4 h-4 text-accent shrink-0 mt-0.5" />
