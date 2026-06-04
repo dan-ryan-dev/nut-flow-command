@@ -98,7 +98,7 @@ const WeekGroup = ({ week, items, onSelectContainer }: { week: string; items: Co
   );
 };
 
-const Row = ({ c }: { c: Container }) => {
+const Row = ({ c, onSelect }: { c: Container; onSelect?: (c: Container) => void }) => {
   const isClosed = c.logisticsStatus === "closed";
   const visibleLots = c.lots.slice(0, 2);
   const overflow = c.lots.length - visibleLots.length;
@@ -106,9 +106,15 @@ const Row = ({ c }: { c: Container }) => {
   return (
     <tr className={`hover:bg-secondary/30 ${isClosed ? "opacity-55" : ""}`}>
       <td className="px-5 py-3">
-        <div className={`font-mono text-[13px] text-foreground ${isClosed ? "line-through decoration-muted-foreground/60" : ""}`}>
-          {c.id}
-        </div>
+        <button
+          type="button"
+          onClick={() => onSelect?.(c)}
+          className="text-left group"
+        >
+          <div className={`font-mono text-[13px] text-foreground group-hover:text-primary group-hover:underline underline-offset-2 decoration-primary/40 ${isClosed ? "line-through decoration-muted-foreground/60" : ""}`}>
+            {c.id}
+          </div>
+        </button>
         <div className="text-[11px] text-muted-foreground">{c.facility} · {c.product}</div>
       </td>
       <td className="px-3 py-3 font-mono text-[12px] text-foreground/90">{c.booking}</td>
