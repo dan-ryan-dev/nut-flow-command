@@ -26,6 +26,8 @@ const ContainersLedgerPage = () => {
   const [issuesOnly, setIssuesOnly] = useState(false);
   const [query, setQuery] = useState("");
   const [pdfOpen, setPdfOpen] = useState(false);
+  const [selectedContainer, setSelectedContainer] = useState<Container | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
   const { role } = useAuth();
   const canWrite = role === "coordinator" || role === "admin";
   const cq = useAllContainersQuery();
