@@ -20,7 +20,7 @@ const STATUS_ORDER: Record<LogisticsStatus, number> = {
 const sortRows = (rows: Container[]) =>
   [...rows].sort((a, b) => STATUS_ORDER[a.logisticsStatus] - STATUS_ORDER[b.logisticsStatus] || a.id.localeCompare(b.id));
 
-export const ContainerLedger = ({ rows }: { rows: Container[] }) => {
+export const ContainerLedger = ({ rows, onSelectContainer }: { rows: Container[]; onSelectContainer?: (c: Container) => void }) => {
   const groups = useMemo(() => {
     const map = new Map<string, Container[]>();
     rows.forEach((r) => {
