@@ -48,7 +48,7 @@ export const ContainerLedger = ({ rows, onSelectContainer }: { rows: Container[]
   );
 };
 
-const WeekGroup = ({ week, items }: { week: string; items: Container[] }) => {
+const WeekGroup = ({ week, items, onSelectContainer }: { week: string; items: Container[]; onSelectContainer?: (c: Container) => void }) => {
   const [open, setOpen] = useState(true);
   const closed = items.filter((i) => i.logisticsStatus === "closed").length;
   const action = items.filter((i) => i.docs.bol === "missing" || i.docs.phyto === "missing" || i.etaDelayed).length;
@@ -88,7 +88,7 @@ const WeekGroup = ({ week, items }: { week: string; items: Container[] }) => {
             </thead>
             <tbody className="divide-y divide-border">
               {items.map((c) => (
-                <Row key={c.id} c={c} />
+                <Row key={c.id} c={c} onSelect={onSelectContainer} />
               ))}
             </tbody>
           </table>
