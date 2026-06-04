@@ -42,7 +42,7 @@ export const ContainerLedger = ({ rows, onSelectContainer }: { rows: Container[]
   return (
     <div className="space-y-3">
       {groups.map((g) => (
-        <WeekGroup key={g.week} week={g.week} items={g.items} />
+        <WeekGroup key={g.week} week={g.week} items={g.items} onSelectContainer={onSelectContainer} />
       ))}
     </div>
   );
