@@ -20,7 +20,7 @@ const STATUS_ORDER: Record<LogisticsStatus, number> = {
 const sortRows = (rows: Container[]) =>
   [...rows].sort((a, b) => STATUS_ORDER[a.logisticsStatus] - STATUS_ORDER[b.logisticsStatus] || a.id.localeCompare(b.id));
 
-export const ContainerLedger = ({ rows }: { rows: Container[] }) => {
+export const ContainerLedger = ({ rows, onSelectContainer }: { rows: Container[]; onSelectContainer?: (c: Container) => void }) => {
   const groups = useMemo(() => {
     const map = new Map<string, Container[]>();
     rows.forEach((r) => {
@@ -42,13 +42,13 @@ export const ContainerLedger = ({ rows }: { rows: Container[] }) => {
   return (
     <div className="space-y-3">
       {groups.map((g) => (
-        <WeekGroup key={g.week} week={g.week} items={g.items} />
+        <WeekGroup key={g.week} week={g.week} items={g.items} onSelectContainer={onSelectContainer} />
       ))}
     </div>
   );
 };
 
-const WeekGroup = ({ week, items }: { week: string; items: Container[] }) => {
+const WeekGroup = ({ week, items, onSelectContainer }: { week: string; items: Container[]; onSelectContainer?: (c: Container) => void }) => {
   const [open, setOpen] = useState(true);
   const closed = items.filter((i) => i.logisticsStatus === "closed").length;
   const action = items.filter((i) => i.docs.bol === "missing" || i.docs.phyto === "missing" || i.etaDelayed).length;
@@ -88,7 +88,7 @@ const WeekGroup = ({ week, items }: { week: string; items: Container[] }) => {
             </thead>
             <tbody className="divide-y divide-border">
               {items.map((c) => (
-                <Row key={c.id} c={c} />
+                <Row key={c.id} c={c} onSelect={onSelectContainer} />
               ))}
             </tbody>
           </table>
@@ -98,7 +98,7 @@ const WeekGroup = ({ week, items }: { week: string; items: Container[] }) => {
   );
 };
 
-const Row = ({ c }: { c: Container }) => {
+const Row = ({ c, onSelect }: { c: Container; onSelect?: (c: Container) => void }) => {
   const isClosed = c.logisticsStatus === "closed";
   const visibleLots = c.lots.slice(0, 2);
   const overflow = c.lots.length - visibleLots.length;
@@ -106,9 +106,15 @@ const Row = ({ c }: { c: Container }) => {
   return (
     <tr className={`hover:bg-secondary/30 ${isClosed ? "opacity-55" : ""}`}>
       <td className="px-5 py-3">
-        <div className={`font-mono text-[13px] text-foreground ${isClosed ? "line-through decoration-muted-foreground/60" : ""}`}>
-          {c.id}
-        </div>
+        <button
+          type="button"
+          onClick={() => onSelect?.(c)}
+          className="text-left group"
+        >
+          <div className={`font-mono text-[13px] text-foreground group-hover:text-primary group-hover:underline underline-offset-2 decoration-primary/40 ${isClosed ? "line-through decoration-muted-foreground/60" : ""}`}>
+            {c.id}
+          </div>
+        </button>
         <div className="text-[11px] text-muted-foreground">{c.facility} · {c.product}</div>
       </td>
       <td className="px-3 py-3 font-mono text-[12px] text-foreground/90">{c.booking}</td>

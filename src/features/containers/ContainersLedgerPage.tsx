@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Sidebar } from "@/shared/components/Sidebar";
 import { ContainerLedger } from "@/features/containers/components/ContainerLedger";
+import { ContainerDetailDialog } from "@/features/containers/components/ContainerDetailDialog";
 import type { Container } from "@/shared/data/types";
 import { useAllContainersQuery, isIssueRow } from "@/shared/hooks/useContainers";
 import { Switch } from "@/components/ui/switch";
@@ -25,6 +26,8 @@ const ContainersLedgerPage = () => {
   const [issuesOnly, setIssuesOnly] = useState(false);
   const [query, setQuery] = useState("");
   const [pdfOpen, setPdfOpen] = useState(false);
+  const [selectedContainer, setSelectedContainer] = useState<Container | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
   const { role } = useAuth();
   const canWrite = role === "coordinator" || role === "admin";
   const cq = useAllContainersQuery();
@@ -125,7 +128,7 @@ const ContainersLedgerPage = () => {
                   <Kpi label="On vessel / arrived" value={String(containers.filter((c) => ["loaded-vessel", "arrived-discharge"].includes(c.logisticsStatus)).length)} sub="post-gate-in" tone="good" />
                   <Kpi label="Closed" value={String(containers.filter((c) => c.logisticsStatus === "closed").length)} sub="admin complete" />
                 </div>
-                <ContainerLedger rows={filtered} />
+                <ContainerLedger rows={filtered} onSelectContainer={(c) => { setSelectedContainer(c); setDetailOpen(true); }} />
               </>
             )}
 
@@ -135,6 +138,11 @@ const ContainersLedgerPage = () => {
           </div>
         </div>
       </main>
+      <ContainerDetailDialog
+        container={selectedContainer}
+        open={detailOpen}
+        onClose={() => { setDetailOpen(false); setSelectedContainer(null); }}
+      />
       <PdfBookingFlow
         open={pdfOpen}
         onClose={() => setPdfOpen(false)}
