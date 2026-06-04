@@ -128,7 +128,7 @@ const ContainersLedgerPage = () => {
                   <Kpi label="On vessel / arrived" value={String(containers.filter((c) => ["loaded-vessel", "arrived-discharge"].includes(c.logisticsStatus)).length)} sub="post-gate-in" tone="good" />
                   <Kpi label="Closed" value={String(containers.filter((c) => c.logisticsStatus === "closed").length)} sub="admin complete" />
                 </div>
-                <ContainerLedger rows={filtered} />
+                <ContainerLedger rows={filtered} onSelectContainer={(c) => { setSelectedContainer(c); setDetailOpen(true); }} />
               </>
             )}
 
@@ -138,6 +138,11 @@ const ContainersLedgerPage = () => {
           </div>
         </div>
       </main>
+      <ContainerDetailDialog
+        container={selectedContainer}
+        open={detailOpen}
+        onClose={() => { setDetailOpen(false); setSelectedContainer(null); }}
+      />
       <PdfBookingFlow
         open={pdfOpen}
         onClose={() => setPdfOpen(false)}
