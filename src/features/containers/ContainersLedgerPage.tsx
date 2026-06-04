@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Sidebar } from "@/shared/components/Sidebar";
 import { ContainerLedger } from "@/features/containers/components/ContainerLedger";
+import { ContainerDetailDialog } from "@/features/containers/components/ContainerDetailDialog";
 import type { Container } from "@/shared/data/types";
 import { useAllContainersQuery, isIssueRow } from "@/shared/hooks/useContainers";
 import { Switch } from "@/components/ui/switch";
